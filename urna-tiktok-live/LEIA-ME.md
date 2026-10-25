@@ -1,6 +1,6 @@
 # Urna da Live (TikTok)
 
-🌹 Rosa vermelha = voto no **13** · 🤍 Rosa branca = voto no **22**
+🌹 Rosa vermelha = voto no **13** · Rosa branca = voto no **22**
 
 A tela digita o número na urna, faz o bipe de confirmação, mostra o nome e a foto de quem mandou
 o presente, soma o placar e mostra quem mais votou de cada lado.
@@ -24,6 +24,30 @@ o presente, soma o placar e mostra quem mais votou de cada lado.
 7. Comece a live. Quando aparecer "✅ Conectado" na janela preta, já está contando.
 
 > Se você abrir a live **depois** de ligar a urna, tudo bem: ela fica tentando conectar sozinha.
+
+## Colocar o debate embaixo
+
+A parte de baixo da tela fica **vazia e transparente**: é ali que o debate aparece.
+(Para ver onde fica esse espaço, abra `http://localhost:3000/?fundo=1`; ele aparece com uma borda tracejada.)
+Os nomes de quem votou aparecem por cima do debate, como na live do exemplo.
+
+**Jeito 1: captura de janela (funciona com qualquer canal)**
+1. Abra o debate no navegador (YouTube da emissora, Globoplay etc.) e deixe o vídeo em tela cheia
+   ou com a janela grande.
+2. No LIVE Studio/OBS: Adicionar fonte → **Captura de janela** → escolha a janela do navegador.
+3. Arraste e redimensione o vídeo para a **parte de baixo** da tela.
+4. Na lista de fontes, deixe a **urna (Navegador) em cima** e o debate **embaixo**. Assim a urna
+   fica por cima e o vídeo aparece no espaço vazio.
+5. Para o som do debate ir para a live, a captura do áudio do computador (Áudio da área de
+   trabalho) precisa estar ligada.
+
+**Jeito 2: link do YouTube dentro da própria urna**
+No `config.json`, coloque o link da transmissão do debate no YouTube:
+`"videoDebate": "https://www.youtube.com/watch?v=XXXXXXXXXXX"` e reinicie (`npm start`).
+O vídeo já aparece no espaço de baixo. Alguns canais não deixam o vídeo ser exibido fora do
+YouTube; se aparecer erro, use o Jeito 1.
+
+> Atenção: retransmitir o sinal de uma TV pode fazer o TikTok derrubar a live por direitos autorais.
 
 ## Testar antes de entrar ao vivo
 

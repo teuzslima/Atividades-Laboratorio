@@ -25,6 +25,7 @@ function placar() {
     tipo: 'placar',
     votos: estado.votos,
     nomes: { '13': config.candidatos['13'].nome, '22': config.candidatos['22'].nome },
+    videoDebate: config.videoDebate || '',
     top: { '13': topEleitores('13'), '22': topEleitores('22') },
   };
 }

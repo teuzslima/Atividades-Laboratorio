@@ -9,61 +9,68 @@
   * { box-sizing:border-box; margin:0; padding:0; }
   html, body { width:100%; height:100%; background:transparent; overflow:hidden;
     font-family:'Arial Black', Impact, sans-serif; color:#fff; }
-  body.fundo { background:var(--fundo); }
-  .tela { width:100vw; padding:3vw; display:flex; flex-direction:column; gap:3vw; }
+  html.fundo body { background:var(--fundo); }
+  .tela { width:100vw; height:100vh; padding:2.5vw 3vw 0; display:flex; flex-direction:column; gap:2vw; }
+  .rosa { width:1.15em; height:1.45em; vertical-align:-.4em; }
 
-  h1 { text-align:center; font-size:8vw; letter-spacing:.3vw; text-shadow:0 .6vw 0 #000; }
-  .barra { height:3vw; border-radius:2vw; background:#2c313c; overflow:hidden; display:flex; }
+  h1 { text-align:center; font-size:6.5vw; letter-spacing:.3vw; text-shadow:0 .6vw 0 #000; }
+  .barra { height:2.4vw; flex:none; border-radius:2vw; background:#2c313c; overflow:hidden; display:flex; }
   .barra div { transition:width .6s; }
   .b13 { background:linear-gradient(90deg,#e63946,#f4a261); }
   .b22 { background:linear-gradient(90deg,#f4d35e,#2a9d8f); }
 
-  .lados { display:grid; grid-template-columns:1fr 1fr; gap:3vw; }
-  .lado { display:flex; flex-direction:column; gap:2vw; }
+  .lados { display:grid; grid-template-columns:1fr 1fr; gap:3vw; flex:none; }
+  .lado { display:flex; flex-direction:column; gap:1.6vw; }
   .placar { background:var(--card); border-radius:3vw; overflow:hidden; border:.5vw solid; }
   .r .placar { border-color:var(--vermelho); } .g .placar { border-color:var(--verde); }
-  .placar .topo { text-align:right; padding:1vw 3vw; font-size:6vw; }
+  .placar .topo { text-align:right; padding:.6vw 3vw; font-size:4.5vw; }
   .r .topo { background:var(--vermelho); } .g .topo { background:var(--verde); }
-  .pontos { text-align:center; font-size:15vw; line-height:1.1; padding-top:1vw; }
+  .pontos { text-align:center; font-size:11vw; line-height:1.1; }
   .pontos.pulo { animation:pulo .4s; }
   @keyframes pulo { 50% { transform:scale(1.15); } }
-  .rotulo { text-align:center; font-size:2.6vw; letter-spacing:1vw; color:#bbb; }
-  .pct { display:flex; justify-content:space-between; font-size:3.2vw; padding:1vw 3vw 2.5vw; }
+  .rotulo { text-align:center; font-size:2.2vw; letter-spacing:1vw; color:#bbb; }
+  .pct { display:flex; justify-content:space-between; font-size:2.8vw; padding:.6vw 3vw 1.4vw; }
   .lider { visibility:hidden; } .lidera .lider { visibility:visible; }
-  .nome { background:var(--card); border-radius:2vw; text-align:center; font-size:5vw; padding:1.5vw; }
+  .nome { background:var(--card); border-radius:2vw; text-align:center; font-size:4.2vw; padding:1vw; }
 
   /* urna */
   .urna { position:relative; background:linear-gradient(#e7e3da,#bdb7aa); border-radius:3vw;
-    padding:3vw; display:grid; grid-template-columns:1.4fr 1fr; gap:2.5vw; box-shadow:0 1.5vw 0 #7a756b; }
-  .visor { background:#d8e6d0; border:1vw solid #333; border-radius:1vw; color:#111; height:26vw;
+    padding:2vw; display:grid; grid-template-columns:1.4fr 1fr; gap:2vw; box-shadow:0 1vw 0 #7a756b; }
+  .visor { background:#d8e6d0; border:1vw solid #333; border-radius:1vw; color:#111; height:19vw;
     display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
     font-family:'Courier New', monospace; font-weight:bold; }
   .r .visor.ativo { background:#f3d0d0; } .g .visor.ativo { background:#cfeedd; }
-  .visor .num { font-size:11vw; letter-spacing:2vw; }
-  .visor .cand { font-size:3vw; }
-  .visor .fim { font-size:6vw; }
-  .teclado { background:#222; border-radius:1.5vw; padding:1.5vw; display:grid; grid-template-columns:repeat(3,1fr); gap:1vw; }
-  .tecla { background:#111; color:#fff; border-radius:.7vw; text-align:center; font-size:2.8vw; padding:.6vw 0;
+  .visor .num { font-size:8.5vw; letter-spacing:1.5vw; }
+  .visor .cand { font-size:2.5vw; }
+  .visor .fim { font-size:5vw; }
+  .teclado { background:#222; border-radius:1.2vw; padding:1vw; display:grid; grid-template-columns:repeat(3,1fr); gap:.6vw; }
+  .tecla { background:#111; color:#fff; border-radius:.6vw; text-align:center; font-size:2.2vw; padding:.2vw 0;
     font-family:Arial, sans-serif; transition:background .1s; }
   .tecla.z { grid-column:2; }
   .tecla.ap { background:#888; }
-  .confirma { grid-column:1 / 4; background:#2a9d4a; font-size:2.2vw; }
+  .confirma { grid-column:1 / 4; background:#2a9d4a; font-size:1.8vw; }
   .confirma.ap { background:#7fe39b; }
 
   /* quem votou */
-  .avisos { height:34vw; display:flex; flex-direction:column; gap:1.5vw; overflow:hidden; }
+  /* espaço do debate: fica transparente para o vídeo aparecer por baixo */
+  .debate { flex:1; position:relative; margin:0 -3vw; }
+  .debate iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .fundo .debate:not(.com-video) { border:.6vw dashed #556; margin:1vw 0 3vw; border-radius:2vw;
+    display:flex; align-items:center; justify-content:center; color:#778; font-size:5vw; }
+  .fundo .debate:not(.com-video)::before { content:'ESPAÇO DO DEBATE'; }
+  .avisos { position:absolute; top:2vw; left:3vw; width:62%; display:flex; flex-direction:column; gap:1.2vw; z-index:2; }
   .aviso { width:100%; display:flex; align-items:center; gap:2vw;
     background:rgba(0,0,0,.8); border-radius:10vw; padding:1.2vw 3vw 1.2vw 1.2vw; font-family:Arial, sans-serif;
     animation:sobe 4s forwards; }
-  .aviso img, .aviso .sem { width:9vw; height:9vw; border-radius:50%; object-fit:cover; background:#555; flex:none; }
+  .aviso img, .aviso .sem { width:8vw; height:8vw; border-radius:50%; object-fit:cover; background:#555; flex:none; }
   .aviso.r { border-left:1.2vw solid var(--vermelho); } .aviso.g { border-left:1.2vw solid var(--verde); }
-  .aviso b { font-size:4vw; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .aviso span { font-size:3.2vw; color:#ccc; }
-  .aviso .x { margin-left:auto; font-family:Impact, sans-serif; font-style:italic; font-size:8vw; }
+  .aviso b { font-size:3.6vw; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .aviso span { font-size:2.9vw; color:#ccc; }
+  .aviso .x { margin-left:auto; font-family:Impact, sans-serif; font-style:italic; font-size:7vw; }
   @keyframes sobe { 0% { opacity:0; transform:translateX(-10vw) } 8%,85% { opacity:1; transform:none }
     100% { opacity:0 } }
 
-  .top { background:rgba(0,0,0,.55); border-radius:2vw; padding:1.5vw 2vw; font-family:Arial, sans-serif; font-size:3vw; min-height:14vw; }
+  .top { background:rgba(0,0,0,.55); border-radius:2vw; padding:1vw 2vw; font-family:Arial, sans-serif; font-size:2.6vw; min-height:11vw; }
   .top div { display:flex; justify-content:space-between; gap:1vw; }
   .top div span:first-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 </style>
@@ -81,7 +88,7 @@
         <div class="rotulo">VOTOS</div>
         <div class="pct"><span id="pct13">50%</span><span class="lider">● LIDERA</span></div>
       </div>
-      <div class="nome">🌹 <span id="nome13">Lula 13</span></div>
+      <div class="nome"><span class="ico" data-cor="13"></span> <span id="nome13">Lula 13</span></div>
       <div class="urna"><div class="visor" id="visor13"></div><div class="teclado" id="teclado13"></div></div>
       <div class="top" id="top13"></div>
     </div>
@@ -92,19 +99,47 @@
         <div class="rotulo">VOTOS</div>
         <div class="pct"><span id="pct22">50%</span><span class="lider">● LIDERA</span></div>
       </div>
-      <div class="nome">🤍 <span id="nome22">Flávio 22</span></div>
+      <div class="nome"><span class="ico" data-cor="22"></span> <span id="nome22">Flávio 22</span></div>
       <div class="urna"><div class="visor" id="visor22"></div><div class="teclado" id="teclado22"></div></div>
       <div class="top" id="top22"></div>
     </div>
   </div>
-  <div class="avisos" id="avisos"></div>
+  <div class="debate" id="debate"><div class="avisos" id="avisos"></div></div>
 </div>
 
 <script>
 // Abra com ?fundo=1 para ver com fundo escuro (sem isso o fundo é transparente para a live).
-if (new URLSearchParams(location.search).has('fundo')) document.body.classList.add('fundo');
+if (new URLSearchParams(location.search).has('fundo')) document.documentElement.classList.add('fundo');
 
 const nomes = { '13': 'Lula 13', '22': 'Flávio 22' };
+
+// Rosa desenhada: vermelha para o 13 e branca para o 22 (igual aos presentes do TikTok).
+const CORES_ROSA = { '13': ['#e0182d', '#b30f22', '#7d0814'], '22': ['#fbfaf5', '#e4e0d3', '#b9b3a0'] };
+function rosa(n) {
+  const [p1, p2, sombra] = CORES_ROSA[n];
+  return `<svg class="rosa" viewBox="0 0 32 40"><path d="M16 23V39" stroke="#2d8a3e" stroke-width="2.4"/>
+    <path d="M16 31C11 27 8 29 6.5 32.5C11 34 14 33 16 31Z" fill="#3aa14c"/>
+    <path d="M16 34C21 30 24 31 25.5 34.5C21 36 18 36 16 34Z" fill="#3aa14c"/>
+    <path d="M5 10C5 20 10.5 25 16 25S27 20 27 10C23 13 19.5 9.5 16 6C12.5 9.5 9 13 5 10Z" fill="${p1}" stroke="${sombra}" stroke-width=".6"/>
+    <path d="M9.5 9.5C10.5 4 13.5 1.5 16 1.5S21.5 4 22.5 9.5C19.5 11.5 17.5 9 16 7.5C14.5 9 12.5 11.5 9.5 9.5Z" fill="${p2}" stroke="${sombra}" stroke-width=".6"/>
+    <path d="M5.5 11C7 19 11 22 15 22.5C11 19 9.5 15 10.5 10.5M26.5 11C25 19 21 22 17 22.5C21 19 22.5 15 21.5 10.5" fill="${p2}" stroke="${sombra}" stroke-width=".6"/>
+    <path d="M16 16.5c-2.2 0-3.2-1.8-2.2-3.3s3.8-1.2 3.8 1-2.2 3.4-4.4 2.6" stroke="${sombra}" stroke-width="1" fill="none"/></svg>`;
+}
+document.querySelectorAll('.ico').forEach(el => el.innerHTML = rosa(el.dataset.cor));
+
+// Vídeo do debate dentro da própria tela (opcional, link do YouTube no config.json).
+let videoAtual = '';
+function mostrarVideo(link) {
+  if (!link || link === videoAtual) return;
+  videoAtual = link;
+  const id = (link.match(/(?:v=|youtu\.be\/|live\/|embed\/)([\w-]{11})/) || [])[1];
+  if (!id) return;
+  const f = document.createElement('iframe');
+  f.src = `https://www.youtube.com/embed/${id}?autoplay=1&controls=0&rel=0`;
+  f.allow = 'autoplay; encrypted-media';
+  $('debate').prepend(f);
+  $('debate').classList.add('com-video');
+}
 const $ = id => document.getElementById(id);
 const esperar = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
@@ -163,7 +198,7 @@ function mostrarEleitor(m) {
   const el = document.createElement('div');
   el.className = 'aviso ' + (m.numero === '13' ? 'r' : 'g');
   el.innerHTML = (m.foto ? `<img src="${esc(m.foto)}">` : '<div class="sem"></div>')
-    + `<div style="min-width:0"><b>${esc(m.nome)}</b><span>votou ${m.numero} ${m.numero === '13' ? '🌹' : '🤍'}</span></div>`
+    + `<div style="min-width:0"><b>${esc(m.nome)}</b><span>votou ${m.numero} ${rosa(m.numero)}</span></div>`
     + `<div class="x">x${m.qtd}</div>`;
   caixa.prepend(el);
   setTimeout(() => el.remove(), 4000);
@@ -171,6 +206,7 @@ function mostrarEleitor(m) {
 
 function atualizar(p) {
   Object.assign(nomes, p.nomes);
+  mostrarVideo(p.videoDebate);
   const total = p.votos['13'] + p.votos['22'];
   for (const n of ['13', '22']) {
     $('nome' + n).textContent = p.nomes[n];
