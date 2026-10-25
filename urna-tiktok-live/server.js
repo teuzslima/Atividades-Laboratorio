@@ -133,7 +133,8 @@ function conectar() {
     return;
   }
   console.log(`⏳ Conectando na live de @${usuario}...`);
-  const opcoes = { enableExtendedGiftInfo: true };
+  // Sem enableExtendedGiftInfo: buscar a lista de presentes exige plano pago da Euler Stream.
+  const opcoes = {};
   if (config.chaveEuler) opcoes.signApiKey = config.chaveEuler;
   const live = new TikTokLiveConnection(usuario, opcoes);
 
@@ -141,7 +142,7 @@ function conectar() {
   live.on(WebcastEvent.CHAT, data => console.log(`💬 ${data.user?.nickname}: ${data.comment}`));
 
   live.on(WebcastEvent.GIFT, data => {
-    const giftName = data.giftDetails?.giftName || data.extendedGiftInfo?.name || '';
+    const giftName = data.giftDetails?.giftName || '';
     const giftType = data.giftDetails?.giftType;
     const numero = qualCandidato(data.giftId, giftName);
     const user = data.user || {};
