@@ -215,7 +215,9 @@ function mostrarEleitor(m) {
 function atualizar(p) {
   Object.assign(nomes, p.nomes);
   mostrarVideo(p.videoDebate);
-  volume = Number(p.volumeBipe ?? 30);
+  // ?volume=10 no endereço tem prioridade sobre o config.json
+  const doLink = new URLSearchParams(location.search).get('volume');
+  volume = Number(doLink ?? p.volumeBipe ?? 30);
   const total = p.votos['13'] + p.votos['22'];
   for (const n of ['13', '22']) {
     $('nome' + n).textContent = p.nomes[n];

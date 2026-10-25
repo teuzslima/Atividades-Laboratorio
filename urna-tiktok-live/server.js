@@ -56,7 +56,8 @@ const server = http.createServer((req, res) => {
   if (tipo.startsWith('video/')) return enviarVideo(req, res, arquivo, tipo);
   fs.readFile(arquivo, (err, dados) => {
     if (err) return res.writeHead(404).end();
-    res.writeHead(200, { 'Content-Type': TIPOS[path.extname(arquivo)] || 'application/octet-stream' });
+    // no-store: o LIVE Studio não guarda versão velha da tela
+    res.writeHead(200, { 'Content-Type': TIPOS[path.extname(arquivo)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
     res.end(dados);
   });
 });
