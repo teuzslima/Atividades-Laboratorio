@@ -175,41 +175,58 @@ async function apertar(n, seletor) {
   t.classList.add('ap'); await esperar(180); t.classList.remove('ap');
 }
 
-// Fila por urna: cada voto "digita" um de cada vez.
-const filas = { '13': [], '22': [] }, ocupada = { '13': false, '22': false };
+// Cada urna digita uma vez por rodada. Votos que chegam enquanto ela está digitando
+// não viram fila: só garantem mais UMA rodada depois (senão apita sem parar).
+const pendente = { '13': false, '22': false }, ocupada = { '13': false, '22': false };
 
 async function digitar(n) {
+  pendente[n] = true;
   if (ocupada[n]) return;
   ocupada[n] = true;
-  while (filas[n].length) {
-    filas[n].shift();
+  while (pendente[n]) {
+    pendente[n] = false;
     const visor = $('visor' + n);
     visor.classList.add('ativo');
     visor.innerHTML = '<div class="num">_ _</div>';
-    await apertar(n, `[data-d="${n[0]}"]`); bipe(900, .05);
+    await apertar(n, `[data-d="${n[0]}"]`);
     visor.innerHTML = `<div class="num">${n[0]} _</div>`;
-    await apertar(n, `[data-d="${n[1]}"]`); bipe(900, .05);
+    await apertar(n, `[data-d="${n[1]}"]`);
     visor.innerHTML = `<div class="num">${n}</div><div class="cand">${esc(nomes[n])}</div>`;
     await esperar(300);
     await apertar(n, '.confirma');
-    bipe(1200, .08); await esperar(110); bipe(1200, .08); await esperar(110); bipe(1200, .3);
+    bipe(1200, .15);
     visor.innerHTML = '<div class="fim">FIM</div>';
-    await esperar(700);
+    await esperar(1500);
   }
   $('visor' + n).classList.remove('ativo');
   $('visor' + n).innerHTML = '<div class="num">_ _</div>';
   ocupada[n] = false;
 }
 
+// No máximo 3 avisos na tela. Se a mesma pessoa manda de novo, o aviso dela
+// só aumenta o "x" em vez de criar outro.
+const MAX_AVISOS = 3;
 function mostrarEleitor(m) {
   const caixa = $('avisos');
-  const el = document.createElement('div');
-  el.className = 'aviso ' + (m.numero === '13' ? 'r' : 'g');
-  el.innerHTML = (m.foto ? `<img src="${esc(m.foto)}">` : '<div class="sem"></div>')
-    + `<div style="min-width:0"><b>${esc(m.nome)}</b><span>votou ${m.numero} ${rosa(m.numero)}</span></div>`
-    + `<div class="x">x${m.qtd}</div>`;
+  const id = `${m.numero}:${m.nome}`;
+  let el = [...caixa.children].find(a => a.dataset.id === id);
+  if (el) {
+    el.dataset.qtd = Number(el.dataset.qtd) + m.qtd;
+    el.querySelector('.x').textContent = 'x' + el.dataset.qtd;
+    clearTimeout(el.timer);
+    el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  } else {
+    el = document.createElement('div');
+    el.className = 'aviso ' + (m.numero === '13' ? 'r' : 'g');
+    el.dataset.id = id;
+    el.dataset.qtd = m.qtd;
+    el.innerHTML = (m.foto ? `<img src="${esc(m.foto)}">` : '<div class="sem"></div>')
+      + `<div style="min-width:0"><b>${esc(m.nome)}</b><span>votou ${m.numero} ${rosa(m.numero)}</span></div>`
+      + `<div class="x">x${m.qtd}</div>`;
+    while (caixa.children.length >= MAX_AVISOS) caixa.lastElementChild.remove();
+  }
   caixa.prepend(el);
-  setTimeout(() => el.remove(), 4000);
+  el.timer = setTimeout(() => el.remove(), 4000);
 }
 
 function atualizar(p) {
@@ -241,7 +258,6 @@ function conectar() {
     if (m.tipo === 'placar') atualizar(m);
     if (m.tipo === 'voto') {
       mostrarEleitor(m);
-      filas[m.numero].push(m);
       digitar(m.numero);
     }
   };
