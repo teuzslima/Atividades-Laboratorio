@@ -106,7 +106,7 @@ function qualCandidato(giftId, giftName) {
   const nomeMin = (giftName || '').toLowerCase().trim();
   // Confere primeiro pelo número do presente, depois pelo nome exato.
   for (const [numero, c] of Object.entries(config.candidatos)) {
-    if (c.presentesIds.includes(giftId)) return numero;
+    if (c.presentesIds.some(id => String(id) === String(giftId))) return numero;
   }
   for (const [numero, c] of Object.entries(config.candidatos)) {
     if (c.presentesNomes.some(n => n.toLowerCase() === nomeMin)) return numero;
@@ -139,23 +139,26 @@ function conectar() {
   const live = new TikTokLiveConnection(usuario, opcoes);
 
   // Mostra os comentários: se eles aparecem aqui, a conexão com a live está funcionando.
-  live.on(WebcastEvent.CHAT, data => console.log(`💬 ${data.user?.nickname}: ${data.comment}`));
+  live.on(WebcastEvent.CHAT, data => console.log(`💬 ${data.user?.nickname}: ${data.content ?? data.comment}`));
 
   live.on(WebcastEvent.GIFT, data => {
-    const giftName = data.giftDetails?.giftName || '';
-    const giftType = data.giftDetails?.giftType;
+    // O TikTok muda os nomes dos campos de vez em quando; aceitamos os dois formatos.
+    const gift = data.gift || {};
+    const giftName = gift.name || data.giftDetails?.giftName || '';
+    const giftType = gift.type ?? data.giftDetails?.giftType;
     const numero = qualCandidato(data.giftId, giftName);
     const user = data.user || {};
+    const usuarioId = user.id || user.userId || user.displayId || user.uniqueId;
+    const foto = user.avatarThumb?.urlList?.[0] || user.profilePicture?.url?.[0] || '';
     console.log(`🎁 ${user.nickname} enviou "${giftName}" (id ${data.giftId}) x${data.repeatCount}`
       + (numero ? ` → voto ${numero}` : ' → não é voto (veja o LEIA-ME para configurar)'));
     if (!numero) return;
 
     // Soma só o que aumentou desde o último aviso do mesmo combo.
-    const chave = `${user.userId}:${data.giftId}:${data.groupId}`;
+    const chave = `${usuarioId}:${data.giftId}:${data.groupId}`;
     const qtd = (data.repeatCount || 1) - (combos.get(chave) || 0);
     if (data.repeatEnd || (giftType !== undefined && giftType !== 1)) combos.delete(chave); else combos.set(chave, data.repeatCount || 1);
-    registrarVoto(numero, user.nickname || user.uniqueId, user.uniqueId || user.userId, qtd,
-      user.profilePicture?.url?.[0] || '');
+    registrarVoto(numero, user.nickname || user.displayId || user.uniqueId, usuarioId, qtd, foto);
   });
 
   live.on('disconnected', () => {
