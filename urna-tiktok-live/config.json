@@ -2,6 +2,7 @@
   "usuarioTikTok": "SEU_USUARIO_AQUI",
   "porta": 3000,
   "videoDebate": "",
+  "chaveEuler": "",
   "candidatos": {
     "13": {
       "nome": "Lula 13",

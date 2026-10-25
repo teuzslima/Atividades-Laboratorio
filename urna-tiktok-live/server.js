@@ -111,6 +111,8 @@ function qualCandidato(giftId, giftName) {
   for (const [numero, c] of Object.entries(config.candidatos)) {
     if (c.presentesNomes.some(n => n.toLowerCase() === nomeMin)) return numero;
   }
+  // Último recurso: qualquer presente com "rosa"/"rose" no nome. Branca vai pro 22, as outras pro 13.
+  if (/ros[ae]/.test(nomeMin)) return /white|branc/.test(nomeMin) ? '22' : '13';
   return null;
 }
 
@@ -125,30 +127,32 @@ function reconectar(segundos) {
 }
 
 function conectar() {
-  if (!config.usuarioTikTok || config.usuarioTikTok === 'SEU_USUARIO_AQUI') {
+  const usuario = String(config.usuarioTikTok || '').trim().replace(/^@/, '');
+  if (!usuario || usuario === 'SEU_USUARIO_AQUI') {
     console.log('⚠️  Coloque seu usuário do TikTok no config.json (sem o @). Por enquanto só o modo teste funciona.');
     return;
   }
-  const live = new TikTokLiveConnection(config.usuarioTikTok, { enableExtendedGiftInfo: true });
+  console.log(`⏳ Conectando na live de @${usuario}...`);
+  const opcoes = { enableExtendedGiftInfo: true };
+  if (config.chaveEuler) opcoes.signApiKey = config.chaveEuler;
+  const live = new TikTokLiveConnection(usuario, opcoes);
+
+  // Mostra os comentários: se eles aparecem aqui, a conexão com a live está funcionando.
+  live.on(WebcastEvent.CHAT, data => console.log(`💬 ${data.user?.nickname}: ${data.comment}`));
 
   live.on(WebcastEvent.GIFT, data => {
     const giftName = data.giftDetails?.giftName || data.extendedGiftInfo?.name || '';
     const giftType = data.giftDetails?.giftType;
     const numero = qualCandidato(data.giftId, giftName);
     const user = data.user || {};
-    if (data.repeatEnd || giftType !== 1) {
-      console.log(`🎁 ${user.nickname} enviou "${giftName}" (id ${data.giftId}) x${data.repeatCount}`);
-    }
+    console.log(`🎁 ${user.nickname} enviou "${giftName}" (id ${data.giftId}) x${data.repeatCount}`
+      + (numero ? ` → voto ${numero}` : ' → não é voto (veja o LEIA-ME para configurar)'));
     if (!numero) return;
 
-    let qtd;
-    if (giftType === 1) {
-      const chave = `${user.userId}:${data.giftId}:${data.groupId}`;
-      qtd = data.repeatCount - (combos.get(chave) || 0);
-      if (data.repeatEnd) combos.delete(chave); else combos.set(chave, data.repeatCount);
-    } else {
-      qtd = data.repeatCount || 1;
-    }
+    // Soma só o que aumentou desde o último aviso do mesmo combo.
+    const chave = `${user.userId}:${data.giftId}:${data.groupId}`;
+    const qtd = (data.repeatCount || 1) - (combos.get(chave) || 0);
+    if (data.repeatEnd || (giftType !== undefined && giftType !== 1)) combos.delete(chave); else combos.set(chave, data.repeatCount || 1);
     registrarVoto(numero, user.nickname || user.uniqueId, user.uniqueId || user.userId, qtd,
       user.profilePicture?.url?.[0] || '');
   });
@@ -159,9 +163,10 @@ function conectar() {
   });
 
   live.connect()
-    .then(s => console.log(`✅ Conectado na live de @${config.usuarioTikTok} (sala ${s.roomId})`))
+    .then(s => console.log(`✅ Conectado na live de @${usuario} (sala ${s.roomId}). Pode mandar rosa!`))
     .catch(err => {
-      console.log(`❌ Não conectou (${err.message}). A live está aberta? Tentando de novo em 15s...`);
+      console.log(`❌ Não conectou em @${usuario}: ${err.message}`);
+      console.log('   Confira: a live está aberta NESSA conta? O usuário no config.json está certo? Tentando de novo em 15s...');
       reconectar(15);
     });
 }

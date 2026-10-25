@@ -81,3 +81,14 @@ preta mostra algo assim:
 Copie esse número do `id` e coloque em `presentesIds` do 22 no `config.json`, por exemplo
 `"presentesIds": [1234]`. Feche (Ctrl+C) e rode `npm start` de novo. Dá para trocar os nomes dos
 candidatos no mesmo arquivo.
+
+## As rosas não estão contando? Olhe a janela preta
+
+| O que aparece | O que fazer |
+|---|---|
+| `⚠️ Coloque seu usuário do TikTok` | Coloque seu usuário no `config.json` e rode `npm start` de novo. |
+| `❌ Não conectou ... Failed to retrieve Room ID` | A live não está aberta **nessa conta**, ou o usuário está errado. Confira letra por letra. |
+| `❌ Não conectou ...` com outra mensagem (ex.: limite, 429) | O serviço gratuito que faz a conexão limitou. Crie uma chave grátis em https://www.eulerstream.com e coloque em `"chaveEuler"` no `config.json`. |
+| `✅ Conectado` e aparecem `💬` comentários, mas nenhum `🎁` | A conexão está boa; espere alguém mandar um presente. |
+| `🎁 ... → não é voto` | O presente chegou mas não foi reconhecido. Copie o número do `id` e coloque em `presentesIds` do candidato certo. |
+| `🎁 ... → voto 13` mas a tela não muda | Aperte F5 na fonte de navegador do LIVE Studio (botão "Atualizar"). |
