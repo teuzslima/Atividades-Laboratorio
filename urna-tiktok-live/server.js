@@ -31,7 +31,8 @@ function placar() {
 }
 
 // ---------- servidor da tela ----------
-const TIPOS = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css' };
+const TIPOS = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
+  '.mp4': 'video/mp4', '.webm': 'video/webm' };
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
 
@@ -48,14 +49,33 @@ const server = http.createServer((req, res) => {
     return res.end('placar zerado');
   }
 
-  const arquivo = path.join(__dirname, 'public', url.pathname === '/' ? 'index.html' : url.pathname);
+  const arquivo = path.join(__dirname, 'public', url.pathname === '/' ? 'index.html' : decodeURIComponent(url.pathname));
   if (!arquivo.startsWith(path.join(__dirname, 'public'))) return res.writeHead(403).end();
+  const tipo = TIPOS[path.extname(arquivo).toLowerCase()] || 'application/octet-stream';
+  if (tipo.startsWith('video/')) return enviarVideo(req, res, arquivo, tipo);
   fs.readFile(arquivo, (err, dados) => {
     if (err) return res.writeHead(404).end();
     res.writeHead(200, { 'Content-Type': TIPOS[path.extname(arquivo)] || 'application/octet-stream' });
     res.end(dados);
   });
 });
+
+// Vídeos são enviados em pedaços, senão o navegador não consegue repetir/avançar.
+function enviarVideo(req, res, arquivo, tipo) {
+  fs.stat(arquivo, (err, info) => {
+    if (err) return res.writeHead(404).end();
+    const faixa = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
+    if (!faixa) {
+      res.writeHead(200, { 'Content-Type': tipo, 'Content-Length': info.size, 'Accept-Ranges': 'bytes' });
+      return fs.createReadStream(arquivo).pipe(res);
+    }
+    const inicio = Number(faixa[1] || 0);
+    const fim = faixa[2] ? Number(faixa[2]) : info.size - 1;
+    res.writeHead(206, { 'Content-Type': tipo, 'Content-Length': fim - inicio + 1, 'Accept-Ranges': 'bytes',
+      'Content-Range': `bytes ${inicio}-${fim}/${info.size}` });
+    fs.createReadStream(arquivo, { start: inicio, end: fim }).pipe(res);
+  });
+}
 
 const wss = new WebSocketServer({ server });
 const enviar = msg => wss.clients.forEach(c => c.readyState === 1 && c.send(JSON.stringify(msg)));

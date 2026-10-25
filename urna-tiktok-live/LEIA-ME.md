@@ -47,6 +47,15 @@ No `config.json`, coloque o link da transmissão do debate no YouTube:
 O vídeo já aparece no espaço de baixo. Alguns canais não deixam o vídeo ser exibido fora do
 YouTube; se aparecer erro, use o Jeito 1.
 
+**Debate antigo (gravado)**
+- Se o debate está no **YouTube**: use o Jeito 2 com o link do vídeo. Ele repete sozinho quando acaba.
+- Se você tem o **arquivo de vídeo** no computador (`.mp4`): coloque o arquivo dentro da pasta
+  `public` e escreva só o nome dele no `config.json`, por exemplo `"videoDebate": "debate.mp4"`.
+  Ele toca embaixo da urna e repete sem parar.
+- Também dá para fazer pelo LIVE Studio/OBS: Adicionar fonte → **Arquivo de mídia / Vídeo**,
+  marque "Repetir" e posicione embaixo, com a urna em cima na lista de fontes.
+- Coloque na tela ou no título que é **reprise**, para ninguém achar que é ao vivo.
+
 > Atenção: retransmitir o sinal de uma TV pode fazer o TikTok derrubar a live por direitos autorais.
 
 ## Testar antes de entrar ao vivo

@@ -54,7 +54,7 @@
   /* quem votou */
   /* espaço do debate: fica transparente para o vídeo aparecer por baixo */
   .debate { flex:1; position:relative; margin:0 -3vw; }
-  .debate iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .debate iframe, .debate video { position:absolute; inset:0; width:100%; height:100%; border:0; object-fit:contain; }
   .fundo .debate:not(.com-video) { border:.6vw dashed #556; margin:1vw 0 3vw; border-radius:2vw;
     display:flex; align-items:center; justify-content:center; color:#778; font-size:5vw; }
   .fundo .debate:not(.com-video)::before { content:'ESPAÇO DO DEBATE'; }
@@ -133,10 +133,17 @@ function mostrarVideo(link) {
   if (!link || link === videoAtual) return;
   videoAtual = link;
   const id = (link.match(/(?:v=|youtu\.be\/|live\/|embed\/)([\w-]{11})/) || [])[1];
-  if (!id) return;
-  const f = document.createElement('iframe');
-  f.src = `https://www.youtube.com/embed/${id}?autoplay=1&controls=0&rel=0`;
-  f.allow = 'autoplay; encrypted-media';
+  let f;
+  if (id) {
+    f = document.createElement('iframe');
+    f.src = `https://www.youtube.com/embed/${id}?autoplay=1&controls=0&rel=0&loop=1&playlist=${id}`;
+    f.allow = 'autoplay; encrypted-media';
+  } else {
+    // Arquivo de vídeo colocado na pasta "public" (ex.: debate.mp4), repete sem parar.
+    f = document.createElement('video');
+    f.src = '/' + encodeURIComponent(link);
+    f.autoplay = f.loop = f.playsInline = true;
+  }
   $('debate').prepend(f);
   $('debate').classList.add('com-video');
 }
