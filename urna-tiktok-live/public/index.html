@@ -87,10 +87,40 @@
   /* espaço do debate: fica transparente para o vídeo aparecer por baixo */
   .debate { flex:1; position:relative; margin:0 calc(-3 * var(--u)); }
   .debate iframe, .debate video { position:absolute; inset:0; width:100%; height:100%; border:0; object-fit:contain; }
-  .fundo .debate:not(.com-video) { border:calc(.6 * var(--u)) dashed rgba(255,255,255,.4); margin:calc(1 * var(--u)) 0 calc(3 * var(--u));
-    border-radius:calc(2 * var(--u)); display:flex; align-items:center; justify-content:center;
-    color:rgba(255,255,255,.5); font-size:calc(5 * var(--u)); }
-  .fundo .debate:not(.com-video)::before { content:'ESPAÇO DO DEBATE'; }
+
+  /* parte de baixo (quando não tem vídeo): como votar + ranking */
+  .extras { position:absolute; left:calc(3 * var(--u)); right:calc(3 * var(--u)); bottom:calc(1.5 * var(--u));
+    display:flex; flex-direction:column; gap:calc(1.6 * var(--u)); }
+  .com-video .extras { display:none; }
+  .caixa { background:rgba(17,20,26,.88); border-radius:calc(2.5 * var(--u)); padding:calc(1.6 * var(--u)) calc(2.5 * var(--u)); }
+  .caixa h3 { font-weight:normal; font-size:calc(3.2 * var(--u)); color:#ffd166; letter-spacing:calc(.5 * var(--u));
+    text-align:center; margin-bottom:calc(1 * var(--u)); }
+  .como { display:grid; grid-template-columns:1fr 1fr; gap:calc(2 * var(--u)); font-size:calc(3.4 * var(--u)); text-align:center; white-space:nowrap; }
+  .como div { border-radius:calc(2 * var(--u)); padding:calc(1 * var(--u)); }
+  .como .c22 { background:rgba(31,157,85,.25); border:calc(.4 * var(--u)) solid var(--verde); }
+  .como .c13 { background:rgba(214,40,40,.25); border:calc(.4 * var(--u)) solid var(--vermelho); }
+  .como .rosa { width:1.4em; height:1.8em; vertical-align:-.55em; }
+  .ranking { display:grid; grid-template-columns:1fr 1fr; gap:calc(3 * var(--u)); font-family:Arial, sans-serif; }
+  .ranking .linha { display:flex; align-items:center; gap:calc(1.2 * var(--u)); font-size:calc(2.8 * var(--u));
+    padding:calc(.5 * var(--u)) 0; min-height:calc(6 * var(--u)); }
+  .ranking .pos { font-family:Impact, sans-serif; font-size:calc(3.4 * var(--u)); width:calc(4 * var(--u)); text-align:center; }
+  .ranking img, .ranking .sem { width:calc(5 * var(--u)); height:calc(5 * var(--u)); border-radius:50%; object-fit:cover;
+    background:#444; flex:none; }
+  .ranking .nm { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ranking .qt { font-weight:bold; }
+  .ranking .vazio { color:#888; font-size:calc(2.6 * var(--u)); text-align:center; padding:calc(1.5 * var(--u)) 0; }
+  .ranking .g h4 { color:#4ade80; } .ranking .r h4 { color:#f87171; }
+  .ranking h4 { font:normal calc(2.8 * var(--u)) Impact, sans-serif; text-align:center; margin-bottom:calc(.4 * var(--u)); }
+
+  /* sua marca: em cima e no rodapé */
+  .marca { position:absolute; top:calc(3 * var(--u)); left:calc(3 * var(--u)); font-size:calc(3 * var(--u));
+    line-height:1.05; color:#ffd166; text-shadow:0 calc(.4 * var(--u)) 0 #000; max-width:calc(22 * var(--u)); }
+  .marca small { display:block; font:bold calc(1.6 * var(--u)) Arial, sans-serif; color:#fff; letter-spacing:calc(.2 * var(--u)); }
+  .rodape { margin:0 calc(-3 * var(--u)); background:linear-gradient(90deg,#ffb703,#ffd166,#ffb703); color:#1a1300;
+    text-align:center; font-size:calc(3.4 * var(--u)); padding:calc(1.3 * var(--u)) calc(2 * var(--u));
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rodape b { font-weight:normal; color:#7a0000; }
+  .rodape:empty, .marca:empty { display:none; }
 
   /* quem votou */
   .avisos { position:absolute; top:calc(2 * var(--u)); left:calc(3 * var(--u)); width:70%; display:flex;
@@ -98,18 +128,19 @@
   .aviso { width:100%; display:flex; align-items:center; gap:calc(2 * var(--u)); background:rgba(0,0,0,.6);
     border-radius:calc(10 * var(--u)); padding:calc(1 * var(--u)) calc(3 * var(--u)) calc(1 * var(--u)) calc(1 * var(--u));
     font-family:Arial, sans-serif; animation:entra 4s forwards; }
-  .aviso img.foto, .aviso .sem { width:calc(8 * var(--u)); height:calc(8 * var(--u)); border-radius:50%;
+  .aviso img.foto, .aviso .sem { width:calc(7 * var(--u)); height:calc(7 * var(--u)); border-radius:50%;
     object-fit:cover; background:#555; flex:none; }
   .aviso b { font-size:calc(3.4 * var(--u)); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .aviso span { font-size:calc(2.7 * var(--u)); color:#ddd; }
-  .aviso .presente { font-size:calc(7 * var(--u)); margin-left:auto; line-height:0; }
-  .aviso .x { font-family:Impact, sans-serif; font-style:italic; font-size:calc(7 * var(--u)); text-shadow:0 calc(.4 * var(--u)) 0 #000; }
+  .aviso .presente { font-size:calc(6 * var(--u)); margin-left:auto; line-height:0; }
+  .aviso .x { font-family:Impact, sans-serif; font-style:italic; font-size:calc(6 * var(--u)); text-shadow:0 calc(.4 * var(--u)) 0 #000; }
   @keyframes entra { 0% { opacity:0; transform:translateX(calc(-10 * var(--u))) } 8%,85% { opacity:1; transform:none }
     100% { opacity:0 } }
 </style>
 </head>
 <body>
-<div class="tela">
+<div class="tela" style="position:relative">
+  <div class="marca" id="marca"></div>
   <div class="tempo" id="tempo">
     <div class="t">TEMPO <span id="relogio">--:--</span></div>
     <div class="trilho"><div id="barraTempo"></div></div>
@@ -143,7 +174,26 @@
     </div>
   </div>
 
-  <div class="debate" id="debate"><div class="avisos" id="avisos"></div></div>
+  <div class="debate" id="debate">
+    <div class="avisos" id="avisos"></div>
+    <div class="extras">
+      <div class="caixa">
+        <h3>COMO VOTAR</h3>
+        <div class="como">
+          <div class="c22"><span class="ico" data-cor="22"></span> Rosa branca = <span>22</span></div>
+          <div class="c13"><span class="ico" data-cor="13"></span> Rosa = <span>13</span></div>
+        </div>
+      </div>
+      <div class="caixa">
+        <h3>🏆 TOP APOIADORES</h3>
+        <div class="ranking">
+          <div class="g"><h4 id="rk22t">22</h4><div id="rk22"></div></div>
+          <div class="r"><h4 id="rk13t">13</h4><div id="rk13"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="rodape" id="rodape"></div>
 </div>
 
 <script>
@@ -168,6 +218,17 @@ function rosa(n) {
     <path d="M9.5 9.5C10.5 4 13.5 1.5 16 1.5S21.5 4 22.5 9.5C19.5 11.5 17.5 9 16 7.5C14.5 9 12.5 11.5 9.5 9.5Z" fill="${p2}" stroke="${sombra}" stroke-width=".6"/>
     <path d="M5.5 11C7 19 11 22 15 22.5C11 19 9.5 15 10.5 10.5M26.5 11C25 19 21 22 17 22.5C21 19 22.5 15 21.5 10.5" fill="${p2}" stroke="${sombra}" stroke-width=".6"/>
     <path d="M16 16.5c-2.2 0-3.2-1.8-2.2-3.3s3.8-1.2 3.8 1-2.2 3.4-4.4 2.6" stroke="${sombra}" stroke-width="1" fill="none"/></svg>`;
+}
+
+document.querySelectorAll('.ico').forEach(el => el.innerHTML = rosa(el.dataset.cor));
+
+function ranking(n, lista) {
+  const medalhas = ['🥇', '🥈', '🥉'];
+  $('rk' + n).innerHTML = lista.length
+    ? lista.map((e, i) => `<div class="linha"><span class="pos">${medalhas[i]}</span>`
+        + (e.foto ? `<img src="${esc(e.foto)}">` : '<span class="sem"></span>')
+        + `<span class="nm">${esc(e.nome)}</span><span class="qt">${e.qtd}</span></div>`).join('')
+    : '<div class="vazio">Mande a primeira rosa!</div>';
 }
 
 // Urnas: teclado + foto do candidato no visor (public/fotos/13.jpg e 22.jpg).
@@ -254,7 +315,7 @@ async function digitar(n) {
 
 // No máximo 3 avisos na tela. Se a mesma pessoa manda de novo, o aviso dela
 // só aumenta o "x" em vez de criar outro.
-const MAX_AVISOS = 3;
+const MAX_AVISOS = 2;
 function mostrarEleitor(m) {
   const caixa = $('avisos');
   const id = `${m.numero}:${m.nome}`;
@@ -314,6 +375,10 @@ function atualizar(p) {
   if (!fimRodada && !mostrandoResultado) $('faixa').textContent = 'VOTAÇÃO ABERTA';
   tique();
 
+  $('marca').innerHTML = p.marca ? `${esc(p.marca)}<small>JOGOS INTERATIVOS</small>` : '';
+  $('rodape').innerHTML = p.contato
+    ? `🎮 Jogo interativo pra sua live? <b>WhatsApp ${esc(p.contato)}</b>` : '';
+
   const total = p.votos['13'] + p.votos['22'];
   for (const n of ['13', '22']) {
     const el = $('pontos' + n);
@@ -322,6 +387,8 @@ function atualizar(p) {
     $('prog' + n).style.width = (total ? p.votos[n] / total * 100 : 0) + '%';
     const outro = n === '13' ? '22' : '13';
     $('lado' + n).classList.toggle('lidera', p.votos[n] > p.votos[outro]);
+    $('rk' + n + 't').textContent = nomes[n];
+    ranking(n, p.top[n]);
     const ult = p.ultimo?.[n];
     $('ultimo' + n).innerHTML = ult ? `@${esc(ult)} • ${nomePresente[n]} ${rosa(n)}` : `${nomePresente[n]} ${rosa(n)} = ${esc(nomes[n])}`;
   }

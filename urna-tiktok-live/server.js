@@ -48,6 +48,8 @@ function placar() {
     nomes: { '13': config.candidatos['13'].nome, '22': config.candidatos['22'].nome },
     videoDebate: config.videoDebate || '',
     volumeBipe: config.volumeBipe ?? 30,
+    marca: config.marca || '',
+    contato: config.contato || '',
     top: { '13': topEleitores('13'), '22': topEleitores('22') },
     ultimo: estado.ultimo,
     fimRodada: RODADA_MS ? estado.fimRodada : 0,
@@ -65,8 +67,8 @@ const server = http.createServer((req, res) => {
 
   // Teste sem precisar de presente: http://localhost:3000/teste?voto=13&nome=Maria&qtd=5
   if (url.pathname === '/teste') {
-    registrarVoto(url.searchParams.get('voto') || '13', url.searchParams.get('nome') || 'Teste',
-      'teste', Number(url.searchParams.get('qtd') || 1), '');
+    const nome = url.searchParams.get('nome') || 'Teste';
+    registrarVoto(url.searchParams.get('voto') || '13', nome, 'teste:' + nome, Number(url.searchParams.get('qtd') || 1), '');
     return res.end('ok');
   }
   if (url.pathname === '/zerar') {

@@ -27,6 +27,9 @@ o presente, soma o placar e mostra quem mais votou de cada lado.
 
 ## Colocar o debate embaixo
 
+> ⚠️ **Evite.** Passar o debate (vídeo de TV) faz o TikTok restringir a live por direitos autorais.
+> Sem vídeo, a parte de baixo mostra "Como votar" e o "Top apoiadores", que já prendem a galera.
+
 A parte de baixo da tela fica **vazia e transparente**: é ali que o debate aparece.
 (Para ver onde fica esse espaço, abra `http://localhost:3000/?fundo=1`; ele aparece com uma borda tracejada.)
 Os nomes de quem votou aparecem por cima do debate, como na live do exemplo.
@@ -57,6 +60,13 @@ YouTube; se aparecer erro, use o Jeito 1.
 - Coloque na tela ou no título que é **reprise**, para ninguém achar que é ao vivo.
 
 > Atenção: retransmitir o sinal de uma TV pode fazer o TikTok derrubar a live por direitos autorais.
+
+## Sua marca e seu contato
+
+No `config.json`:
+- `"marca"`: o nome que aparece no canto de cima (ex.: `"MATEUS GAMES"`).
+- `"contato"`: seu WhatsApp, que aparece no rodapé: "🎮 Jogo interativo pra sua live? WhatsApp ...".
+Deixe `""` para esconder.
 
 ## Fotos nas urnas
 
