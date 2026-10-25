@@ -1,0 +1,16 @@
+{
+  "usuarioTikTok": "SEU_USUARIO_AQUI",
+  "porta": 3000,
+  "candidatos": {
+    "13": {
+      "nome": "Lula 13",
+      "presentesIds": [5655],
+      "presentesNomes": ["Rose", "Rosa"]
+    },
+    "22": {
+      "nome": "Flávio 22",
+      "presentesIds": [],
+      "presentesNomes": ["White Rose", "Rosa branca", "Rosa Branca"]
+    }
+  }
+}

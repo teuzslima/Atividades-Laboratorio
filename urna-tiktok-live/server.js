@@ -1,0 +1,148 @@
+// Urna da live: lê os presentes do TikTok e manda os votos para a tela (overlay).
+const fs = require('fs');
+const path = require('path');
+const http = require('http');
+const { WebSocketServer } = require('ws');
+const { TikTokLiveConnection, WebcastEvent } = require('tiktok-live-connector');
+
+const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+const ARQUIVO_VOTOS = path.join(__dirname, 'votos.json');
+
+// Placar salvo em arquivo, para não perder nada se o programa fechar.
+let estado = { votos: { '13': 0, '22': 0 }, eleitores: {} };
+try { estado = JSON.parse(fs.readFileSync(ARQUIVO_VOTOS, 'utf8')); } catch {}
+const salvar = () => fs.writeFileSync(ARQUIVO_VOTOS, JSON.stringify(estado));
+
+function topEleitores(numero) {
+  return Object.values(estado.eleitores)
+    .filter(e => e.numero === numero)
+    .sort((a, b) => b.qtd - a.qtd)
+    .slice(0, 3);
+}
+
+function placar() {
+  return {
+    tipo: 'placar',
+    votos: estado.votos,
+    nomes: { '13': config.candidatos['13'].nome, '22': config.candidatos['22'].nome },
+    top: { '13': topEleitores('13'), '22': topEleitores('22') },
+  };
+}
+
+// ---------- servidor da tela ----------
+const TIPOS = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css' };
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url, 'http://localhost');
+
+  // Teste sem precisar de presente: http://localhost:3000/teste?voto=13&nome=Maria&qtd=5
+  if (url.pathname === '/teste') {
+    registrarVoto(url.searchParams.get('voto') || '13', url.searchParams.get('nome') || 'Teste',
+      'teste', Number(url.searchParams.get('qtd') || 1), '');
+    return res.end('ok');
+  }
+  if (url.pathname === '/zerar') {
+    estado = { votos: { '13': 0, '22': 0 }, eleitores: {} };
+    salvar();
+    enviar(placar());
+    return res.end('placar zerado');
+  }
+
+  const arquivo = path.join(__dirname, 'public', url.pathname === '/' ? 'index.html' : url.pathname);
+  if (!arquivo.startsWith(path.join(__dirname, 'public'))) return res.writeHead(403).end();
+  fs.readFile(arquivo, (err, dados) => {
+    if (err) return res.writeHead(404).end();
+    res.writeHead(200, { 'Content-Type': TIPOS[path.extname(arquivo)] || 'application/octet-stream' });
+    res.end(dados);
+  });
+});
+
+const wss = new WebSocketServer({ server });
+const enviar = msg => wss.clients.forEach(c => c.readyState === 1 && c.send(JSON.stringify(msg)));
+wss.on('connection', ws => ws.send(JSON.stringify(placar())));
+
+function registrarVoto(numero, nome, usuario, qtd, foto) {
+  if (!estado.votos[numero] && estado.votos[numero] !== 0) return;
+  if (qtd <= 0) return;
+  estado.votos[numero] += qtd;
+  const chave = `${usuario}:${numero}`;
+  const e = estado.eleitores[chave] || (estado.eleitores[chave] = { nome, numero, qtd: 0, foto });
+  e.qtd += qtd;
+  e.nome = nome;
+  if (foto) e.foto = foto;
+  salvar();
+  console.log(`🗳️  ${nome} votou ${numero} x${qtd}  |  13: ${estado.votos['13']}  22: ${estado.votos['22']}`);
+  enviar({ tipo: 'voto', numero, nome, qtd, foto });
+  enviar(placar());
+}
+
+server.listen(config.porta, () => {
+  console.log(`\nTela da urna: http://localhost:${config.porta}`);
+  console.log(`Teste:        http://localhost:${config.porta}/teste?voto=13&nome=Maria&qtd=3\n`);
+});
+
+// ---------- conexão com a live ----------
+function qualCandidato(giftId, giftName) {
+  const nomeMin = (giftName || '').toLowerCase().trim();
+  // Confere primeiro pelo número do presente, depois pelo nome exato.
+  for (const [numero, c] of Object.entries(config.candidatos)) {
+    if (c.presentesIds.includes(giftId)) return numero;
+  }
+  for (const [numero, c] of Object.entries(config.candidatos)) {
+    if (c.presentesNomes.some(n => n.toLowerCase() === nomeMin)) return numero;
+  }
+  return null;
+}
+
+// Presentes em sequência (combo x16, x100...) chegam várias vezes com a contagem
+// subindo. Guardamos o último valor de cada combo e somamos só a diferença.
+const combos = new Map();
+
+let tentativa = null;
+function reconectar(segundos) {
+  if (tentativa) return;
+  tentativa = setTimeout(() => { tentativa = null; conectar(); }, segundos * 1000);
+}
+
+function conectar() {
+  if (!config.usuarioTikTok || config.usuarioTikTok === 'SEU_USUARIO_AQUI') {
+    console.log('⚠️  Coloque seu usuário do TikTok no config.json (sem o @). Por enquanto só o modo teste funciona.');
+    return;
+  }
+  const live = new TikTokLiveConnection(config.usuarioTikTok, { enableExtendedGiftInfo: true });
+
+  live.on(WebcastEvent.GIFT, data => {
+    const giftName = data.giftDetails?.giftName || data.extendedGiftInfo?.name || '';
+    const giftType = data.giftDetails?.giftType;
+    const numero = qualCandidato(data.giftId, giftName);
+    const user = data.user || {};
+    if (data.repeatEnd || giftType !== 1) {
+      console.log(`🎁 ${user.nickname} enviou "${giftName}" (id ${data.giftId}) x${data.repeatCount}`);
+    }
+    if (!numero) return;
+
+    let qtd;
+    if (giftType === 1) {
+      const chave = `${user.userId}:${data.giftId}:${data.groupId}`;
+      qtd = data.repeatCount - (combos.get(chave) || 0);
+      if (data.repeatEnd) combos.delete(chave); else combos.set(chave, data.repeatCount);
+    } else {
+      qtd = data.repeatCount || 1;
+    }
+    registrarVoto(numero, user.nickname || user.uniqueId, user.uniqueId || user.userId, qtd,
+      user.profilePicture?.url?.[0] || '');
+  });
+
+  live.on('disconnected', () => {
+    console.log('Live desconectada. Tentando de novo em 10s...');
+    reconectar(10);
+  });
+
+  live.connect()
+    .then(s => console.log(`✅ Conectado na live de @${config.usuarioTikTok} (sala ${s.roomId})`))
+    .catch(err => {
+      console.log(`❌ Não conectou (${err.message}). A live está aberta? Tentando de novo em 15s...`);
+      reconectar(15);
+    });
+}
+
+conectar();

@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Urna da Live</title>
+<style>
+  :root { --vermelho:#d62828; --verde:#1f9d55; --fundo:#1b1f27; --card:#11141a; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { width:100%; height:100%; background:transparent; overflow:hidden;
+    font-family:'Arial Black', Impact, sans-serif; color:#fff; }
+  body.fundo { background:var(--fundo); }
+  .tela { width:100vw; padding:3vw; display:flex; flex-direction:column; gap:3vw; }
+
+  h1 { text-align:center; font-size:8vw; letter-spacing:.3vw; text-shadow:0 .6vw 0 #000; }
+  .barra { height:3vw; border-radius:2vw; background:#2c313c; overflow:hidden; display:flex; }
+  .barra div { transition:width .6s; }
+  .b13 { background:linear-gradient(90deg,#e63946,#f4a261); }
+  .b22 { background:linear-gradient(90deg,#f4d35e,#2a9d8f); }
+
+  .lados { display:grid; grid-template-columns:1fr 1fr; gap:3vw; }
+  .lado { display:flex; flex-direction:column; gap:2vw; }
+  .placar { background:var(--card); border-radius:3vw; overflow:hidden; border:.5vw solid; }
+  .r .placar { border-color:var(--vermelho); } .g .placar { border-color:var(--verde); }
+  .placar .topo { text-align:right; padding:1vw 3vw; font-size:6vw; }
+  .r .topo { background:var(--vermelho); } .g .topo { background:var(--verde); }
+  .pontos { text-align:center; font-size:15vw; line-height:1.1; padding-top:1vw; }
+  .pontos.pulo { animation:pulo .4s; }
+  @keyframes pulo { 50% { transform:scale(1.15); } }
+  .rotulo { text-align:center; font-size:2.6vw; letter-spacing:1vw; color:#bbb; }
+  .pct { display:flex; justify-content:space-between; font-size:3.2vw; padding:1vw 3vw 2.5vw; }
+  .lider { visibility:hidden; } .lidera .lider { visibility:visible; }
+  .nome { background:var(--card); border-radius:2vw; text-align:center; font-size:5vw; padding:1.5vw; }
+
+  /* urna */
+  .urna { position:relative; background:linear-gradient(#e7e3da,#bdb7aa); border-radius:3vw;
+    padding:3vw; display:grid; grid-template-columns:1.4fr 1fr; gap:2.5vw; box-shadow:0 1.5vw 0 #7a756b; }
+  .visor { background:#d8e6d0; border:1vw solid #333; border-radius:1vw; color:#111; height:26vw;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    font-family:'Courier New', monospace; font-weight:bold; }
+  .r .visor.ativo { background:#f3d0d0; } .g .visor.ativo { background:#cfeedd; }
+  .visor .num { font-size:11vw; letter-spacing:2vw; }
+  .visor .cand { font-size:3vw; }
+  .visor .fim { font-size:6vw; }
+  .teclado { background:#222; border-radius:1.5vw; padding:1.5vw; display:grid; grid-template-columns:repeat(3,1fr); gap:1vw; }
+  .tecla { background:#111; color:#fff; border-radius:.7vw; text-align:center; font-size:2.8vw; padding:.6vw 0;
+    font-family:Arial, sans-serif; transition:background .1s; }
+  .tecla.z { grid-column:2; }
+  .tecla.ap { background:#888; }
+  .confirma { grid-column:1 / 4; background:#2a9d4a; font-size:2.2vw; }
+  .confirma.ap { background:#7fe39b; }
+
+  /* quem votou */
+  .avisos { height:34vw; display:flex; flex-direction:column; gap:1.5vw; overflow:hidden; }
+  .aviso { width:100%; display:flex; align-items:center; gap:2vw;
+    background:rgba(0,0,0,.8); border-radius:10vw; padding:1.2vw 3vw 1.2vw 1.2vw; font-family:Arial, sans-serif;
+    animation:sobe 4s forwards; }
+  .aviso img, .aviso .sem { width:9vw; height:9vw; border-radius:50%; object-fit:cover; background:#555; flex:none; }
+  .aviso.r { border-left:1.2vw solid var(--vermelho); } .aviso.g { border-left:1.2vw solid var(--verde); }
+  .aviso b { font-size:4vw; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .aviso span { font-size:3.2vw; color:#ccc; }
+  .aviso .x { margin-left:auto; font-family:Impact, sans-serif; font-style:italic; font-size:8vw; }
+  @keyframes sobe { 0% { opacity:0; transform:translateX(-10vw) } 8%,85% { opacity:1; transform:none }
+    100% { opacity:0 } }
+
+  .top { background:rgba(0,0,0,.55); border-radius:2vw; padding:1.5vw 2vw; font-family:Arial, sans-serif; font-size:3vw; min-height:14vw; }
+  .top div { display:flex; justify-content:space-between; gap:1vw; }
+  .top div span:first-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+</style>
+</head>
+<body>
+<div class="tela">
+  <h1>QUEM LEVA A MELHOR</h1>
+  <div class="barra"><div class="b13" id="barra13" style="width:50%"></div><div class="b22" id="barra22" style="width:50%"></div></div>
+
+  <div class="lados">
+    <div class="lado r" id="lado13">
+      <div class="placar">
+        <div class="topo">13</div>
+        <div class="pontos" id="pontos13">0</div>
+        <div class="rotulo">VOTOS</div>
+        <div class="pct"><span id="pct13">50%</span><span class="lider">● LIDERA</span></div>
+      </div>
+      <div class="nome">🌹 <span id="nome13">Lula 13</span></div>
+      <div class="urna"><div class="visor" id="visor13"></div><div class="teclado" id="teclado13"></div></div>
+      <div class="top" id="top13"></div>
+    </div>
+    <div class="lado g" id="lado22">
+      <div class="placar">
+        <div class="topo">22</div>
+        <div class="pontos" id="pontos22">0</div>
+        <div class="rotulo">VOTOS</div>
+        <div class="pct"><span id="pct22">50%</span><span class="lider">● LIDERA</span></div>
+      </div>
+      <div class="nome">🤍 <span id="nome22">Flávio 22</span></div>
+      <div class="urna"><div class="visor" id="visor22"></div><div class="teclado" id="teclado22"></div></div>
+      <div class="top" id="top22"></div>
+    </div>
+  </div>
+  <div class="avisos" id="avisos"></div>
+</div>
+
+<script>
+// Abra com ?fundo=1 para ver com fundo escuro (sem isso o fundo é transparente para a live).
+if (new URLSearchParams(location.search).has('fundo')) document.body.classList.add('fundo');
+
+const nomes = { '13': 'Lula 13', '22': 'Flávio 22' };
+const $ = id => document.getElementById(id);
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+
+for (const n of ['13', '22']) {
+  $('teclado' + n).innerHTML = [1,2,3,4,5,6,7,8,9].map(d => `<div class="tecla" data-d="${d}">${d}</div>`).join('')
+    + '<div class="tecla z" data-d="0">0</div><div class="tecla confirma">CONFIRMA</div>';
+  $('visor' + n).innerHTML = '<div class="num">_ _</div>';
+}
+
+// Bipe da urna (som parecido com o "pi-pi-pi" de confirmação).
+let audio;
+function bipe(freq, dur) {
+  try {
+    audio = audio || new AudioContext();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = freq; o.type = 'square'; g.gain.value = 0.05;
+    o.connect(g).connect(audio.destination);
+    o.start(); o.stop(audio.currentTime + dur);
+  } catch {}
+}
+
+async function apertar(n, seletor) {
+  const t = $('teclado' + n).querySelector(seletor);
+  t.classList.add('ap'); await esperar(180); t.classList.remove('ap');
+}
+
+// Fila por urna: cada voto "digita" um de cada vez.
+const filas = { '13': [], '22': [] }, ocupada = { '13': false, '22': false };
+
+async function digitar(n) {
+  if (ocupada[n]) return;
+  ocupada[n] = true;
+  while (filas[n].length) {
+    filas[n].shift();
+    const visor = $('visor' + n);
+    visor.classList.add('ativo');
+    visor.innerHTML = '<div class="num">_ _</div>';
+    await apertar(n, `[data-d="${n[0]}"]`); bipe(900, .05);
+    visor.innerHTML = `<div class="num">${n[0]} _</div>`;
+    await apertar(n, `[data-d="${n[1]}"]`); bipe(900, .05);
+    visor.innerHTML = `<div class="num">${n}</div><div class="cand">${esc(nomes[n])}</div>`;
+    await esperar(300);
+    await apertar(n, '.confirma');
+    bipe(1200, .08); await esperar(110); bipe(1200, .08); await esperar(110); bipe(1200, .3);
+    visor.innerHTML = '<div class="fim">FIM</div>';
+    await esperar(700);
+  }
+  $('visor' + n).classList.remove('ativo');
+  $('visor' + n).innerHTML = '<div class="num">_ _</div>';
+  ocupada[n] = false;
+}
+
+function mostrarEleitor(m) {
+  const caixa = $('avisos');
+  const el = document.createElement('div');
+  el.className = 'aviso ' + (m.numero === '13' ? 'r' : 'g');
+  el.innerHTML = (m.foto ? `<img src="${esc(m.foto)}">` : '<div class="sem"></div>')
+    + `<div style="min-width:0"><b>${esc(m.nome)}</b><span>votou ${m.numero} ${m.numero === '13' ? '🌹' : '🤍'}</span></div>`
+    + `<div class="x">x${m.qtd}</div>`;
+  caixa.prepend(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function atualizar(p) {
+  Object.assign(nomes, p.nomes);
+  const total = p.votos['13'] + p.votos['22'];
+  for (const n of ['13', '22']) {
+    $('nome' + n).textContent = p.nomes[n];
+    const el = $('pontos' + n);
+    if (el.textContent !== String(p.votos[n])) { el.classList.remove('pulo'); void el.offsetWidth; el.classList.add('pulo'); }
+    el.textContent = p.votos[n];
+    const pct = total ? Math.round(p.votos[n] / total * 100) : 50;
+    $('pct' + n).textContent = pct + '%';
+    $('barra' + n).style.width = pct + '%';
+    const outro = n === '13' ? '22' : '13';
+    $('lado' + n).classList.toggle('lidera', p.votos[n] > p.votos[outro]);
+    $('top' + n).innerHTML = '<div style="color:#ffd166">🏆 Quem mais votou</div>'
+      + p.top[n].map((e, i) => `<div><span>${i + 1}. ${esc(e.nome)}</span><span>${e.qtd}</span></div>`).join('');
+  }
+}
+
+function conectar() {
+  const ws = new WebSocket(`ws://${location.host}`);
+  ws.onmessage = ev => {
+    const m = JSON.parse(ev.data);
+    if (m.tipo === 'placar') atualizar(m);
+    if (m.tipo === 'voto') {
+      mostrarEleitor(m);
+      filas[m.numero].push(m);
+      digitar(m.numero);
+    }
+  };
+  ws.onclose = () => setTimeout(conectar, 2000);
+}
+conectar();
+</script>
+</body>
+</html>
