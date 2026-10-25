@@ -58,6 +58,17 @@ YouTube; se aparecer erro, use o Jeito 1.
 
 > Atenção: retransmitir o sinal de uma TV pode fazer o TikTok derrubar a live por direitos autorais.
 
+## Fotos nas urnas
+
+Coloque as fotos na pasta `public/fotos` com os nomes **`13.jpg`** e **`22.jpg`** (pode ser `.png`).
+Elas aparecem no visor de cada urna. Sem foto, aparece só o número.
+
+## Rodadas com tempo
+
+No `config.json`, `"rodadaMinutos": 5` faz rodadas de 5 minutos. Quando o tempo acaba, a faixa
+mostra quem venceu e o placar volta a zero para a próxima rodada.
+Use `0` para não ter tempo (votação contínua). `http://localhost:3000/zerar` reinicia a rodada na hora.
+
 ## Volume do bipe
 
 No `config.json`, mude `"volumeBipe"`: **0** = sem som, **30** = padrão, **100** = máximo.

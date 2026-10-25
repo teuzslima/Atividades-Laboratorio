@@ -1,0 +1,7 @@
+Coloque aqui as fotos que aparecem no visor das urnas:
+
+  13.jpg  -> foto do candidato 13
+  22.jpg  -> foto do candidato 22
+
+Também aceita .png ou .webp (ex.: 13.png). Sem foto, o visor mostra só o número.
+Depois de colocar, clique em "Atualizar" na fonte da urna no LIVE Studio.

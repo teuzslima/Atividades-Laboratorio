@@ -5,113 +5,157 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Urna da Live</title>
 <style>
-  :root { --u:min(1vw, 0.5625vh); --vermelho:#d62828; --verde:#1f9d55; --fundo:#1b1f27; --card:#11141a; }
+  /* 1 unidade = 1% da largura de uma tela em pé (9:16) que cabe na janela */
+  :root { --u:min(1vw, 0.5625vh); --vermelho:#d62828; --verde:#1f9d55; --fundo:#5b5e63; --card:#11141a; }
   * { box-sizing:border-box; margin:0; padding:0; }
   html, body { width:100%; height:100%; background:transparent; overflow:hidden;
-    font-family:'Arial Black', Impact, sans-serif; color:#fff; }
-  html.fundo body { background:var(--fundo); }
-  .tela { width:calc(100 * var(--u)); height:calc(177.78 * var(--u)); margin:0 auto; padding:calc(2.5 * var(--u)) calc(3 * var(--u)) 0; display:flex; flex-direction:column; gap:calc(2 * var(--u)); }
-  .rosa { width:1.15em; height:1.45em; vertical-align:-.4em; }
+    font-family:Impact, 'Arial Black', sans-serif; color:#fff; }
+  html.fundo body { background:radial-gradient(circle at 50% 30%, #8a8d92, var(--fundo)); }
+  .tela { width:calc(100 * var(--u)); height:calc(177.78 * var(--u)); margin:0 auto;
+    padding:calc(2 * var(--u)) calc(3 * var(--u)) 0; display:flex; flex-direction:column; gap:calc(2 * var(--u)); }
+  .rosa { width:1.1em; height:1.4em; vertical-align:-.35em; }
 
-  h1 { -webkit-text-stroke:calc(.25 * var(--u)) #000; text-align:center; font-size:calc(6.5 * var(--u)); letter-spacing:calc(.3 * var(--u)); text-shadow:0 calc(.6 * var(--u)) 0 #000; }
-  .barra { height:calc(2.4 * var(--u)); flex:none; border-radius:calc(2 * var(--u)); background:#2c313c; overflow:hidden; display:flex; }
-  .barra div { transition:width .6s; }
-  .b13 { background:linear-gradient(90deg,#e63946,#f4a261); }
-  .b22 { background:linear-gradient(90deg,#f4d35e,#2a9d8f); }
+  /* tempo e rodada */
+  .tempo { align-self:center; width:calc(48 * var(--u)); background:#15181d; border-radius:calc(3 * var(--u));
+    padding:calc(1.4 * var(--u)) calc(3 * var(--u)) calc(2 * var(--u)); box-shadow:0 calc(.8 * var(--u)) 0 #000;
+    text-align:center; }
+  .tempo .t { font-size:calc(3.4 * var(--u)); letter-spacing:calc(.8 * var(--u)); color:#d9dde3; }
+  .tempo .t span { color:#ffd166; }
+  .tempo .trilho { margin-top:calc(1 * var(--u)); height:calc(2.6 * var(--u)); border-radius:calc(2 * var(--u));
+    background:#2a2e35; overflow:hidden; }
+  .tempo .trilho div { height:100%; width:100%; background:linear-gradient(#fff,#cfd3d8); border-radius:inherit;
+    transition:width 1s linear; }
+  .tempo.acabando .trilho div { background:linear-gradient(#ff8a80,#e53935); }
+  .sem-tempo .tempo { display:none; }
 
-  .lados { display:grid; grid-template-columns:1fr 1fr; gap:calc(3 * var(--u)); flex:none; }
+  .faixa { background:#1c1f25; border:calc(.5 * var(--u)) solid #000; border-radius:calc(5 * var(--u));
+    text-align:center; font-size:calc(5 * var(--u)); color:#ffd166; padding:calc(.8 * var(--u));
+    text-shadow:0 calc(.4 * var(--u)) 0 #000; box-shadow:inset 0 0 0 calc(.4 * var(--u)) #3a3f48; }
+  .faixa.fim { background:#ffd166; color:#111; text-shadow:none; font-size:calc(4.4 * var(--u)); white-space:nowrap; animation:pisca .5s 6 alternate; }
+  @keyframes pisca { to { transform:scale(1.04); } }
+
+  /* placares */
+  .lados { display:grid; grid-template-columns:1fr 1fr; gap:calc(3 * var(--u)); }
   .lado { display:flex; flex-direction:column; gap:calc(1.6 * var(--u)); }
-  .placar { background:var(--card); border-radius:calc(3 * var(--u)); overflow:hidden; border:calc(.5 * var(--u)) solid; }
-  .r .placar { border-color:var(--vermelho); } .g .placar { border-color:var(--verde); }
-  .placar .topo { text-align:right; padding:calc(.6 * var(--u)) calc(3 * var(--u)); font-size:calc(4.5 * var(--u)); }
-  .r .topo { background:var(--vermelho); } .g .topo { background:var(--verde); }
-  .pontos { text-align:center; font-size:calc(11 * var(--u)); line-height:1.1; }
+  .placar { position:relative; border-radius:calc(3 * var(--u)); padding:calc(.9 * var(--u));
+    box-shadow:0 calc(.8 * var(--u)) 0 rgba(0,0,0,.5); }
+  .g .placar { background:linear-gradient(#2fb866,#167a3f); }
+  .r .placar { background:linear-gradient(#ef4444,#a51d1d); }
+  .placar .miolo { background:var(--card); border-radius:calc(2.2 * var(--u)); margin-top:calc(5 * var(--u));
+    padding:calc(1 * var(--u)) calc(2.5 * var(--u)) calc(2 * var(--u)); text-align:center; }
+  .frente { position:absolute; top:calc(1.2 * var(--u)); left:50%; transform:translateX(-50%); white-space:nowrap;
+    background:#ffd84d; color:#4a3500; border-radius:calc(3 * var(--u)); padding:calc(.3 * var(--u)) calc(2.4 * var(--u));
+    font-size:calc(2.6 * var(--u)); visibility:hidden; }
+  .lidera .frente { visibility:visible; }
+  .pontos { font-size:calc(13 * var(--u)); line-height:1; text-shadow:0 calc(.5 * var(--u)) 0 #000; }
   .pontos.pulo { animation:pulo .4s; }
   @keyframes pulo { 50% { transform:scale(1.15); } }
-  .rotulo { text-align:center; font-size:calc(2.2 * var(--u)); letter-spacing:calc(1 * var(--u)); color:#bbb; }
-  .pct { display:flex; justify-content:space-between; font-size:calc(2.8 * var(--u)); padding:calc(.6 * var(--u)) calc(3 * var(--u)) calc(1.4 * var(--u)); }
-  .lider { visibility:hidden; } .lidera .lider { visibility:visible; }
-  .nome { background:var(--card); border-radius:calc(2 * var(--u)); text-align:center; font-size:calc(4.2 * var(--u)); padding:calc(1 * var(--u)); }
+  .rotulo { font-size:calc(2.6 * var(--u)); letter-spacing:calc(1 * var(--u)); color:#c9a96e; margin:calc(.4 * var(--u)) 0 calc(1.4 * var(--u)); }
+  .progresso { height:calc(2.4 * var(--u)); border-radius:calc(2 * var(--u)); background:#2a2e35; overflow:hidden; }
+  .progresso div { height:100%; width:0; border-radius:inherit; transition:width .6s; }
+  .g .progresso div { background:linear-gradient(#4ade80,#16a34a); }
+  .r .progresso div { background:linear-gradient(#f87171,#dc2626); }
+  .ultimo { margin-top:calc(1 * var(--u)); background:#15181d; border-radius:calc(2 * var(--u));
+    font-size:calc(2.7 * var(--u)); padding:calc(.8 * var(--u)) calc(2 * var(--u)); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; text-align:center; }
 
   /* urna */
-  .urna { position:relative; background:linear-gradient(#e7e3da,#bdb7aa); border-radius:calc(3 * var(--u));
-    padding:calc(2 * var(--u)); display:grid; grid-template-columns:1.4fr 1fr; gap:calc(2 * var(--u)); box-shadow:0 calc(1 * var(--u)) 0 #7a756b; }
-  .visor { background:#d8e6d0; border:calc(1 * var(--u)) solid #333; border-radius:calc(1 * var(--u)); color:#111; height:calc(19 * var(--u));
-    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
-    font-family:'Courier New', monospace; font-weight:bold; }
-  .r .visor.ativo { background:#f3d0d0; } .g .visor.ativo { background:#cfeedd; }
-  .visor .num { font-size:calc(8.5 * var(--u)); letter-spacing:calc(1.5 * var(--u)); }
-  .visor .cand { font-size:calc(2.5 * var(--u)); }
-  .visor .fim { font-size:calc(5 * var(--u)); }
-  .teclado { background:#222; border-radius:calc(1.2 * var(--u)); padding:calc(1 * var(--u)); display:grid; grid-template-columns:repeat(3,1fr); gap:calc(.6 * var(--u)); }
-  .tecla { background:#111; color:#fff; border-radius:calc(.6 * var(--u)); text-align:center; font-size:calc(2.2 * var(--u)); padding:calc(.2 * var(--u)) 0;
-    font-family:Arial, sans-serif; transition:background .1s; }
+  .urna { background:linear-gradient(#f1eee8,#c3bdb1); border-radius:calc(2.5 * var(--u)); padding:calc(2 * var(--u));
+    display:grid; grid-template-columns:1.25fr 1fr; gap:calc(2 * var(--u)); box-shadow:0 calc(1.2 * var(--u)) 0 #7a756b; }
+  .visor { position:relative; border-radius:calc(.8 * var(--u)); height:calc(22 * var(--u)); overflow:hidden;
+    border:calc(1 * var(--u)) solid; display:flex; align-items:center; justify-content:center; background:#e8eef2; }
+  .g .visor { border-color:#1f9d55; } .r .visor { border-color:#d62828; }
+  .visor img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .visor .sem-foto { font-size:calc(11 * var(--u)); color:#333; }
+  .visor .digitos { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(232,238,242,.94); color:#111; font-family:'Courier New', monospace; font-weight:bold; }
+  .visor.digitando .digitos { display:flex; }
+  .digitos .num { font-size:calc(9 * var(--u)); letter-spacing:calc(1.5 * var(--u)); }
+  .digitos .cand { font-size:calc(2.6 * var(--u)); }
+  .teclado { background:#1d1f22; border-radius:calc(1.2 * var(--u)); padding:calc(1.2 * var(--u));
+    display:grid; grid-template-columns:repeat(3,1fr); gap:calc(.7 * var(--u)); align-content:center; }
+  .tecla { background:#0d0e10; color:#fff; border-radius:calc(.6 * var(--u)); text-align:center;
+    font:bold calc(2.4 * var(--u)) Arial, sans-serif; padding:calc(.4 * var(--u)) 0; transition:background .1s; }
   .tecla.z { grid-column:2; }
-  .tecla.ap { background:#888; }
-  .confirma { grid-column:1 / 4; background:#2a9d4a; font-size:calc(1.8 * var(--u)); }
-  .confirma.ap { background:#7fe39b; }
+  .tecla.ap { background:#9aa0a6; }
+  .botoes { grid-column:1 / 4; display:grid; grid-template-columns:1fr 1fr 1fr; gap:calc(.5 * var(--u)); margin-top:calc(.5 * var(--u)); }
+  .botoes div { border-radius:calc(.4 * var(--u)); font:bold calc(1.05 * var(--u)) Arial, sans-serif; overflow:hidden; text-align:center;
+    padding:calc(.5 * var(--u)) 0; color:#111; }
+  .b-branco { background:#f5f5f5; } .b-corrige { background:#f08a24; } .b-confirma { background:#27a844; }
+  .b-confirma.ap { background:#9ef0b4; }
 
-  /* quem votou */
   /* espaço do debate: fica transparente para o vídeo aparecer por baixo */
   .debate { flex:1; position:relative; margin:0 calc(-3 * var(--u)); }
   .debate iframe, .debate video { position:absolute; inset:0; width:100%; height:100%; border:0; object-fit:contain; }
-  .fundo .debate:not(.com-video) { border:calc(.6 * var(--u)) dashed #556; margin:calc(1 * var(--u)) 0 calc(3 * var(--u)); border-radius:calc(2 * var(--u));
-    display:flex; align-items:center; justify-content:center; color:#778; font-size:calc(5 * var(--u)); }
+  .fundo .debate:not(.com-video) { border:calc(.6 * var(--u)) dashed rgba(255,255,255,.4); margin:calc(1 * var(--u)) 0 calc(3 * var(--u));
+    border-radius:calc(2 * var(--u)); display:flex; align-items:center; justify-content:center;
+    color:rgba(255,255,255,.5); font-size:calc(5 * var(--u)); }
   .fundo .debate:not(.com-video)::before { content:'ESPAÇO DO DEBATE'; }
-  .avisos { position:absolute; top:calc(2 * var(--u)); left:calc(3 * var(--u)); width:62%; display:flex; flex-direction:column; gap:calc(1.2 * var(--u)); z-index:2; }
-  .aviso { width:100%; display:flex; align-items:center; gap:calc(2 * var(--u));
-    background:rgba(0,0,0,.8); border-radius:calc(10 * var(--u)); padding:calc(1.2 * var(--u)) calc(3 * var(--u)) calc(1.2 * var(--u)) calc(1.2 * var(--u)); font-family:Arial, sans-serif;
-    animation:sobe 4s forwards; }
-  .aviso img, .aviso .sem { width:calc(8 * var(--u)); height:calc(8 * var(--u)); border-radius:50%; object-fit:cover; background:#555; flex:none; }
-  .aviso.r { border-left:calc(1.2 * var(--u)) solid var(--vermelho); } .aviso.g { border-left:calc(1.2 * var(--u)) solid var(--verde); }
-  .aviso b { font-size:calc(3.6 * var(--u)); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .aviso span { font-size:calc(2.9 * var(--u)); color:#ccc; }
-  .aviso .x { margin-left:auto; font-family:Impact, sans-serif; font-style:italic; font-size:calc(7 * var(--u)); }
-  @keyframes sobe { 0% { opacity:0; transform:translateX(calc(-10 * var(--u))) } 8%,85% { opacity:1; transform:none }
-    100% { opacity:0 } }
 
-  .top { background:rgba(0,0,0,.55); border-radius:calc(2 * var(--u)); padding:calc(1 * var(--u)) calc(2 * var(--u)); font-family:Arial, sans-serif; font-size:calc(2.6 * var(--u)); min-height:calc(11 * var(--u)); }
-  .top div { display:flex; justify-content:space-between; gap:calc(1 * var(--u)); }
-  .top div span:first-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* quem votou */
+  .avisos { position:absolute; top:calc(2 * var(--u)); left:calc(3 * var(--u)); width:70%; display:flex;
+    flex-direction:column; gap:calc(1.2 * var(--u)); z-index:2; }
+  .aviso { width:100%; display:flex; align-items:center; gap:calc(2 * var(--u)); background:rgba(0,0,0,.6);
+    border-radius:calc(10 * var(--u)); padding:calc(1 * var(--u)) calc(3 * var(--u)) calc(1 * var(--u)) calc(1 * var(--u));
+    font-family:Arial, sans-serif; animation:entra 4s forwards; }
+  .aviso img.foto, .aviso .sem { width:calc(8 * var(--u)); height:calc(8 * var(--u)); border-radius:50%;
+    object-fit:cover; background:#555; flex:none; }
+  .aviso b { font-size:calc(3.4 * var(--u)); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .aviso span { font-size:calc(2.7 * var(--u)); color:#ddd; }
+  .aviso .presente { font-size:calc(7 * var(--u)); margin-left:auto; line-height:0; }
+  .aviso .x { font-family:Impact, sans-serif; font-style:italic; font-size:calc(7 * var(--u)); text-shadow:0 calc(.4 * var(--u)) 0 #000; }
+  @keyframes entra { 0% { opacity:0; transform:translateX(calc(-10 * var(--u))) } 8%,85% { opacity:1; transform:none }
+    100% { opacity:0 } }
 </style>
 </head>
 <body>
 <div class="tela">
-  <h1>QUEM LEVA A MELHOR</h1>
-  <div class="barra"><div class="b13" id="barra13" style="width:50%"></div><div class="b22" id="barra22" style="width:50%"></div></div>
+  <div class="tempo" id="tempo">
+    <div class="t">TEMPO <span id="relogio">--:--</span></div>
+    <div class="trilho"><div id="barraTempo"></div></div>
+  </div>
+  <div class="faixa" id="faixa">RODADA ABERTA</div>
 
   <div class="lados">
-    <div class="lado r" id="lado13">
-      <div class="placar">
-        <div class="topo">13</div>
-        <div class="pontos" id="pontos13">0</div>
-        <div class="rotulo">VOTOS</div>
-        <div class="pct"><span id="pct13">50%</span><span class="lider">● LIDERA</span></div>
-      </div>
-      <div class="nome"><span class="ico" data-cor="13"></span> <span id="nome13">Lula 13</span></div>
-      <div class="urna"><div class="visor" id="visor13"></div><div class="teclado" id="teclado13"></div></div>
-      <div class="top" id="top13"></div>
-    </div>
     <div class="lado g" id="lado22">
       <div class="placar">
-        <div class="topo">22</div>
-        <div class="pontos" id="pontos22">0</div>
-        <div class="rotulo">VOTOS</div>
-        <div class="pct"><span id="pct22">50%</span><span class="lider">● LIDERA</span></div>
+        <div class="frente">👑 NA FRENTE</div>
+        <div class="miolo">
+          <div class="pontos" id="pontos22">0</div>
+          <div class="rotulo">PONTOS</div>
+          <div class="progresso"><div id="prog22"></div></div>
+        </div>
+        <div class="ultimo" id="ultimo22"></div>
       </div>
-      <div class="nome"><span class="ico" data-cor="22"></span> <span id="nome22">Flávio 22</span></div>
       <div class="urna"><div class="visor" id="visor22"></div><div class="teclado" id="teclado22"></div></div>
-      <div class="top" id="top22"></div>
+    </div>
+    <div class="lado r" id="lado13">
+      <div class="placar">
+        <div class="frente">👑 NA FRENTE</div>
+        <div class="miolo">
+          <div class="pontos" id="pontos13">0</div>
+          <div class="rotulo">PONTOS</div>
+          <div class="progresso"><div id="prog13"></div></div>
+        </div>
+        <div class="ultimo" id="ultimo13"></div>
+      </div>
+      <div class="urna"><div class="visor" id="visor13"></div><div class="teclado" id="teclado13"></div></div>
     </div>
   </div>
+
   <div class="debate" id="debate"><div class="avisos" id="avisos"></div></div>
 </div>
 
 <script>
-// Abra com ?fundo=1 para ver com fundo escuro (sem isso o fundo é transparente para a live).
-if (new URLSearchParams(location.search).has('fundo')) document.documentElement.classList.add('fundo');
+// Abra com ?fundo=1 para ver com fundo (sem isso o fundo é transparente para a live).
+const params = new URLSearchParams(location.search);
+if (params.has('fundo')) document.documentElement.classList.add('fundo');
 
 const nomes = { '13': 'Lula 13', '22': 'Flávio 22' };
+const nomePresente = { '13': 'Rosa', '22': 'Rosa branca' };
+const $ = id => document.getElementById(id);
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
 
 // Rosa desenhada: vermelha para o 13 e branca para o 22 (igual aos presentes do TikTok).
 const CORES_ROSA = { '13': ['#e0182d', '#b30f22', '#7d0814'], '22': ['#fbfaf5', '#e4e0d3', '#b9b3a0'] };
@@ -125,9 +169,25 @@ function rosa(n) {
     <path d="M5.5 11C7 19 11 22 15 22.5C11 19 9.5 15 10.5 10.5M26.5 11C25 19 21 22 17 22.5C21 19 22.5 15 21.5 10.5" fill="${p2}" stroke="${sombra}" stroke-width=".6"/>
     <path d="M16 16.5c-2.2 0-3.2-1.8-2.2-3.3s3.8-1.2 3.8 1-2.2 3.4-4.4 2.6" stroke="${sombra}" stroke-width="1" fill="none"/></svg>`;
 }
-document.querySelectorAll('.ico').forEach(el => el.innerHTML = rosa(el.dataset.cor));
 
-// Vídeo do debate dentro da própria tela (opcional, link do YouTube no config.json).
+// Urnas: teclado + foto do candidato no visor (public/fotos/13.jpg e 22.jpg).
+for (const n of ['13', '22']) {
+  $('teclado' + n).innerHTML = [1,2,3,4,5,6,7,8,9].map(d => `<div class="tecla" data-d="${d}">${d}</div>`).join('')
+    + '<div class="tecla z" data-d="0">0</div>'
+    + '<div class="botoes"><div class="b-branco">BRANCO</div><div class="b-corrige">CORRIGE</div><div class="b-confirma">CONFIRMA</div></div>';
+  $('visor' + n).innerHTML = `<div class="sem-foto">${n}</div>`
+    + '<div class="digitos"><div class="num">_ _</div><div class="cand"></div></div>';
+  carregarFoto(n, ['jpg', 'png', 'jpeg', 'webp']);
+}
+function carregarFoto(n, extensoes) {
+  if (!extensoes.length) return;
+  const img = new Image();
+  img.onload = () => $('visor' + n).prepend(img);
+  img.onerror = () => carregarFoto(n, extensoes.slice(1));
+  img.src = `/fotos/${n}.${extensoes[0]}`;
+}
+
+// Vídeo do debate dentro da própria tela (opcional, no config.json).
 let videoAtual = '';
 function mostrarVideo(link) {
   if (!link || link === videoAtual) return;
@@ -147,18 +207,9 @@ function mostrarVideo(link) {
   $('debate').prepend(f);
   $('debate').classList.add('com-video');
 }
-const $ = id => document.getElementById(id);
-const esperar = ms => new Promise(r => setTimeout(r, ms));
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
 
-for (const n of ['13', '22']) {
-  $('teclado' + n).innerHTML = [1,2,3,4,5,6,7,8,9].map(d => `<div class="tecla" data-d="${d}">${d}</div>`).join('')
-    + '<div class="tecla z" data-d="0">0</div><div class="tecla confirma">CONFIRMA</div>';
-  $('visor' + n).innerHTML = '<div class="num">_ _</div>';
-}
-
-// Bipe da urna (som parecido com o "pi-pi-pi" de confirmação).
-let audio, volume = 30; // 0 = mudo, 100 = máximo (vem do config.json)
+// Bipe da urna.
+let audio, volume = 30; // 0 = mudo, 100 = máximo (vem do config.json ou de ?volume=)
 function bipe(freq, dur) {
   if (volume <= 0) return;
   try {
@@ -175,31 +226,29 @@ async function apertar(n, seletor) {
   t.classList.add('ap'); await esperar(180); t.classList.remove('ap');
 }
 
-// Cada urna digita uma vez por rodada. Votos que chegam enquanto ela está digitando
-// não viram fila: só garantem mais UMA rodada depois (senão apita sem parar).
+// Cada urna digita uma vez por rodada de animação. Votos que chegam enquanto ela está
+// digitando não viram fila: só garantem mais UMA rodada depois (senão apita sem parar).
 const pendente = { '13': false, '22': false }, ocupada = { '13': false, '22': false };
 
 async function digitar(n) {
   pendente[n] = true;
   if (ocupada[n]) return;
   ocupada[n] = true;
+  const visor = $('visor' + n), num = visor.querySelector('.num'), cand = visor.querySelector('.cand');
   while (pendente[n]) {
     pendente[n] = false;
-    const visor = $('visor' + n);
-    visor.classList.add('ativo');
-    visor.innerHTML = '<div class="num">_ _</div>';
+    visor.classList.add('digitando');
+    num.textContent = '_ _'; cand.textContent = '';
     await apertar(n, `[data-d="${n[0]}"]`);
-    visor.innerHTML = `<div class="num">${n[0]} _</div>`;
+    num.textContent = `${n[0]} _`;
     await apertar(n, `[data-d="${n[1]}"]`);
-    visor.innerHTML = `<div class="num">${n}</div><div class="cand">${esc(nomes[n])}</div>`;
+    num.textContent = n; cand.textContent = nomes[n];
     await esperar(300);
-    await apertar(n, '.confirma');
+    await apertar(n, '.b-confirma');
     bipe(1200, .15);
-    visor.innerHTML = '<div class="fim">FIM</div>';
+    visor.classList.remove('digitando'); // volta a mostrar a foto
     await esperar(1500);
   }
-  $('visor' + n).classList.remove('ativo');
-  $('visor' + n).innerHTML = '<div class="num">_ _</div>';
   ocupada[n] = false;
 }
 
@@ -217,37 +266,64 @@ function mostrarEleitor(m) {
     el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
   } else {
     el = document.createElement('div');
-    el.className = 'aviso ' + (m.numero === '13' ? 'r' : 'g');
+    el.className = 'aviso';
     el.dataset.id = id;
     el.dataset.qtd = m.qtd;
-    el.innerHTML = (m.foto ? `<img src="${esc(m.foto)}">` : '<div class="sem"></div>')
-      + `<div style="min-width:0"><b>${esc(m.nome)}</b><span>votou ${m.numero} ${rosa(m.numero)}</span></div>`
-      + `<div class="x">x${m.qtd}</div>`;
+    el.innerHTML = (m.foto ? `<img class="foto" src="${esc(m.foto)}">` : '<div class="sem"></div>')
+      + `<div style="min-width:0"><b>${esc(m.nome)}</b><span>enviou ${nomePresente[m.numero]}</span></div>`
+      + `<div class="presente">${rosa(m.numero)}</div><div class="x">x${m.qtd}</div>`;
     while (caixa.children.length >= MAX_AVISOS) caixa.lastElementChild.remove();
   }
   caixa.prepend(el);
   el.timer = setTimeout(() => el.remove(), 4000);
 }
 
+// Tempo da rodada (vem do servidor; corrige diferença de relógio entre PC e página).
+let fimRodada = 0, duracao = 0, diferenca = 0, mostrandoResultado = false;
+function tique() {
+  if (!fimRodada) { document.body.classList.add('sem-tempo'); return; }
+  document.body.classList.remove('sem-tempo');
+  const resta = Math.max(0, fimRodada - (Date.now() + diferenca));
+  const s = Math.ceil(resta / 1000);
+  $('relogio').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  $('barraTempo').style.width = (duracao ? resta / duracao * 100 : 0) + '%';
+  $('tempo').classList.toggle('acabando', s <= 30);
+}
+setInterval(tique, 500);
+
+function mostrarResultado(m) {
+  mostrandoResultado = true;
+  const faixa = $('faixa');
+  faixa.classList.add('fim');
+  faixa.textContent = m.vencedor
+    ? `🏆 ${nomes[m.vencedor].toUpperCase()} VENCEU! ${m.votos['22']} x ${m.votos['13']}`
+    : `EMPATE! ${m.votos['22']} x ${m.votos['13']}`;
+  bipe(1200, .1); setTimeout(() => bipe(1500, .3), 150);
+  setTimeout(() => {
+    mostrandoResultado = false;
+    faixa.classList.remove('fim');
+    faixa.textContent = 'RODADA ABERTA';
+  }, 12000);
+}
+
 function atualizar(p) {
   Object.assign(nomes, p.nomes);
   mostrarVideo(p.videoDebate);
-  // ?volume=10 no endereço tem prioridade sobre o config.json
-  const doLink = new URLSearchParams(location.search).get('volume');
-  volume = Number(doLink ?? p.volumeBipe ?? 30);
+  volume = Number(params.get('volume') ?? p.volumeBipe ?? 30); // ?volume=10 tem prioridade
+  fimRodada = p.fimRodada; duracao = p.duracaoRodada; diferenca = p.agora - Date.now();
+  if (!fimRodada && !mostrandoResultado) $('faixa').textContent = 'VOTAÇÃO ABERTA';
+  tique();
+
   const total = p.votos['13'] + p.votos['22'];
   for (const n of ['13', '22']) {
-    $('nome' + n).textContent = p.nomes[n];
     const el = $('pontos' + n);
     if (el.textContent !== String(p.votos[n])) { el.classList.remove('pulo'); void el.offsetWidth; el.classList.add('pulo'); }
     el.textContent = p.votos[n];
-    const pct = total ? Math.round(p.votos[n] / total * 100) : 50;
-    $('pct' + n).textContent = pct + '%';
-    $('barra' + n).style.width = pct + '%';
+    $('prog' + n).style.width = (total ? p.votos[n] / total * 100 : 0) + '%';
     const outro = n === '13' ? '22' : '13';
     $('lado' + n).classList.toggle('lidera', p.votos[n] > p.votos[outro]);
-    $('top' + n).innerHTML = '<div style="color:#ffd166">🏆 Quem mais votou</div>'
-      + p.top[n].map((e, i) => `<div><span>${i + 1}. ${esc(e.nome)}</span><span>${e.qtd}</span></div>`).join('');
+    const ult = p.ultimo?.[n];
+    $('ultimo' + n).innerHTML = ult ? `@${esc(ult)} • ${nomePresente[n]} ${rosa(n)}` : `${nomePresente[n]} ${rosa(n)} = ${esc(nomes[n])}`;
   }
 }
 
@@ -256,6 +332,7 @@ function conectar() {
   ws.onmessage = ev => {
     const m = JSON.parse(ev.data);
     if (m.tipo === 'placar') atualizar(m);
+    if (m.tipo === 'fimRodada') mostrarResultado(m);
     if (m.tipo === 'voto') {
       mostrarEleitor(m);
       digitar(m.numero);

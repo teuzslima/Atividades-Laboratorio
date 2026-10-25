@@ -9,9 +9,30 @@ const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), '
 const ARQUIVO_VOTOS = path.join(__dirname, 'votos.json');
 
 // Placar salvo em arquivo, para não perder nada se o programa fechar.
-let estado = { votos: { '13': 0, '22': 0 }, eleitores: {} };
-try { estado = JSON.parse(fs.readFileSync(ARQUIVO_VOTOS, 'utf8')); } catch {}
+const estadoVazio = () => ({ votos: { '13': 0, '22': 0 }, eleitores: {}, ultimo: {} });
+let estado = estadoVazio();
+try { estado = { ...estado, ...JSON.parse(fs.readFileSync(ARQUIVO_VOTOS, 'utf8')) }; } catch {}
 const salvar = () => fs.writeFileSync(ARQUIVO_VOTOS, JSON.stringify(estado));
+
+// Rodadas com tempo: quando o tempo acaba, mostra quem venceu e começa outra do zero.
+// "rodadaMinutos": 0 no config.json desliga o tempo (votação contínua).
+const RODADA_MS = (config.rodadaMinutos ?? 5) * 60 * 1000;
+if (RODADA_MS && !(estado.fimRodada > Date.now())) estado.fimRodada = Date.now() + RODADA_MS;
+
+function novaRodada() {
+  estado = { ...estadoVazio(), fimRodada: RODADA_MS ? Date.now() + RODADA_MS : 0 };
+  salvar();
+  enviar(placar());
+}
+
+setInterval(() => {
+  if (!RODADA_MS || Date.now() < estado.fimRodada) return;
+  const { '13': v13, '22': v22 } = estado.votos;
+  const vencedor = v13 === v22 ? null : (v13 > v22 ? '13' : '22');
+  console.log(`🏁 Fim da rodada! 13: ${v13}  22: ${v22}  →  ${vencedor ? 'venceu ' + vencedor : 'empate'}`);
+  enviar({ tipo: 'fimRodada', vencedor, votos: { ...estado.votos } });
+  novaRodada();
+}, 1000);
 
 function topEleitores(numero) {
   return Object.values(estado.eleitores)
@@ -28,12 +49,17 @@ function placar() {
     videoDebate: config.videoDebate || '',
     volumeBipe: config.volumeBipe ?? 30,
     top: { '13': topEleitores('13'), '22': topEleitores('22') },
+    ultimo: estado.ultimo,
+    fimRodada: RODADA_MS ? estado.fimRodada : 0,
+    duracaoRodada: RODADA_MS,
+    agora: Date.now(),
   };
 }
 
 // ---------- servidor da tela ----------
 const TIPOS = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
-  '.mp4': 'video/mp4', '.webm': 'video/webm' };
+  '.mp4': 'video/mp4', '.webm': 'video/webm',
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' };
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
 
@@ -44,10 +70,8 @@ const server = http.createServer((req, res) => {
     return res.end('ok');
   }
   if (url.pathname === '/zerar') {
-    estado = { votos: { '13': 0, '22': 0 }, eleitores: {} };
-    salvar();
-    enviar(placar());
-    return res.end('placar zerado');
+    novaRodada();
+    return res.end('placar zerado e rodada reiniciada');
   }
 
   const arquivo = path.join(__dirname, 'public', url.pathname === '/' ? 'index.html' : decodeURIComponent(url.pathname));
@@ -92,6 +116,7 @@ function registrarVoto(numero, nome, usuario, qtd, foto) {
   e.qtd += qtd;
   e.nome = nome;
   if (foto) e.foto = foto;
+  estado.ultimo[numero] = nome;
   salvar();
   console.log(`🗳️  ${nome} votou ${numero} x${qtd}  |  13: ${estado.votos['13']}  22: ${estado.votos['22']}`);
   enviar({ tipo: 'voto', numero, nome, qtd, foto });

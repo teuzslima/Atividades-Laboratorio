@@ -4,6 +4,7 @@
   "videoDebate": "",
   "chaveEuler": "",
   "volumeBipe": 30,
+  "rodadaMinutos": 5,
   "candidatos": {
     "13": {
       "nome": "Lula 13",
@@ -12,7 +13,7 @@
     },
     "22": {
       "nome": "Flávio 22",
-      "presentesIds": [],
+      "presentesIds": [8239],
       "presentesNomes": ["White Rose", "Rosa branca", "Rosa Branca"]
     }
   }
