@@ -158,12 +158,13 @@ for (const n of ['13', '22']) {
 }
 
 // Bipe da urna (som parecido com o "pi-pi-pi" de confirmação).
-let audio;
+let audio, volume = 30; // 0 = mudo, 100 = máximo (vem do config.json)
 function bipe(freq, dur) {
+  if (volume <= 0) return;
   try {
     audio = audio || new AudioContext();
     const o = audio.createOscillator(), g = audio.createGain();
-    o.frequency.value = freq; o.type = 'square'; g.gain.value = 0.05;
+    o.frequency.value = freq; o.type = 'sine'; g.gain.value = 0.25 * volume / 100;
     o.connect(g).connect(audio.destination);
     o.start(); o.stop(audio.currentTime + dur);
   } catch {}
@@ -214,6 +215,7 @@ function mostrarEleitor(m) {
 function atualizar(p) {
   Object.assign(nomes, p.nomes);
   mostrarVideo(p.videoDebate);
+  volume = Number(p.volumeBipe ?? 30);
   const total = p.votos['13'] + p.votos['22'];
   for (const n of ['13', '22']) {
     $('nome' + n).textContent = p.nomes[n];

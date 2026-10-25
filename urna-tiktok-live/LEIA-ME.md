@@ -58,6 +58,12 @@ YouTube; se aparecer erro, use o Jeito 1.
 
 > Atenção: retransmitir o sinal de uma TV pode fazer o TikTok derrubar a live por direitos autorais.
 
+## Volume do bipe
+
+No `config.json`, mude `"volumeBipe"`: **0** = sem som, **30** = padrão, **100** = máximo.
+Salve, rode `npm start` de novo e clique em **Atualizar** na fonte de navegador.
+Também dá para baixar direto no LIVE Studio/OBS, no controle de volume da fonte da urna.
+
 ## Testar antes de entrar ao vivo
 
 Com a urna ligada, abra no navegador:

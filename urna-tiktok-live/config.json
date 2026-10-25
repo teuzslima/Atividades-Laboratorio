@@ -3,6 +3,7 @@
   "porta": 3000,
   "videoDebate": "",
   "chaveEuler": "",
+  "volumeBipe": 30,
   "candidatos": {
     "13": {
       "nome": "Lula 13",
