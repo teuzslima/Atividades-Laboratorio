@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rastreador da Live</title>
+<link rel="stylesheet" href="/leaflet/leaflet.css">
+<style>
+  /* 1 unidade = 1% da largura de uma tela em pé (9:16) que cabe na janela */
+  :root { --u:min(1vw, 0.5625vh); --verde:#39ff6a; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#000; color:#fff; font-family:Arial, sans-serif; }
+  .tela { position:relative; width:calc(100 * var(--u)); height:calc(177.78 * var(--u)); margin:0 auto; overflow:hidden; background:#071018; }
+  #mapa { position:absolute; inset:0; background:#071018; z-index:0; } /* z-index: mantém as camadas do mapa embaixo do resto */
+  .leaflet-control-attribution { font-size:calc(1.4 * var(--u)) !important; background:rgba(0,0,0,.5) !important; color:#aaa !important; }
+  .leaflet-control-attribution a { color:#ccc !important; }
+
+  /* clima "hacker": escurece o mapa, grade e linhas de tela */
+  .tinta { position:absolute; inset:0; pointer-events:none; background:rgba(0,20,10,.35); transition:background 1s;
+    box-shadow:inset 0 0 calc(20 * var(--u)) rgba(0,0,0,.9); }
+  .rastreando .tinta { background:rgba(0,20,10,.1); }
+  .linhas { position:absolute; inset:0; pointer-events:none; opacity:.25;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.6) 0 1px, transparent 1px 3px); }
+
+  .mono { font-family:'Courier New', Consolas, monospace; }
+  .topo { position:absolute; top:calc(2.5 * var(--u)); left:calc(3 * var(--u)); right:calc(3 * var(--u));
+    display:flex; justify-content:space-between; align-items:center; font-size:calc(2.6 * var(--u)); color:var(--verde);
+    text-shadow:0 0 calc(1 * var(--u)) var(--verde); }
+  .topo b { font-family:Impact, sans-serif; font-weight:normal; font-size:calc(3.6 * var(--u)); color:#ffd166; text-shadow:0 calc(.3 * var(--u)) 0 #000; }
+  .ponto { display:inline-block; width:calc(1.6 * var(--u)); height:calc(1.6 * var(--u)); border-radius:50%; background:#ff3b30;
+    animation:pisca 1s steps(2) infinite; vertical-align:middle; }
+  @keyframes pisca { 50% { opacity:0; } }
+
+  /* terminal */
+  .terminal { position:absolute; top:calc(8 * var(--u)); left:calc(3 * var(--u)); width:calc(52 * var(--u)); height:calc(31 * var(--u));
+    background:rgba(0,0,0,.78); border:calc(.3 * var(--u)) solid rgba(57,255,106,.6); border-radius:calc(1.5 * var(--u));
+    padding:calc(1.2 * var(--u)) calc(1.6 * var(--u)); font-size:calc(2.4 * var(--u)); line-height:1.35; color:var(--verde);
+    overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; text-shadow:0 0 calc(.6 * var(--u)) rgba(57,255,106,.6); }
+  .terminal .t { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .terminal .forte { color:#fff; }
+  .terminal .alerta { color:#ff3b30; }
+  .cursor::after { content:'█'; animation:pisca .8s steps(2) infinite; }
+
+  /* webcam falsa */
+  .cam { position:absolute; top:calc(8 * var(--u)); right:calc(3 * var(--u)); width:calc(39 * var(--u)); height:calc(31 * var(--u));
+    border:calc(.3 * var(--u)) solid rgba(255,255,255,.35); border-radius:calc(1.5 * var(--u)); overflow:hidden; background:#000; }
+  .cam video, .cam svg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .cam video { display:none; }
+  .cam.com-video video { display:block; }
+  .cam.com-video svg.cena { display:none; }
+  .cam .efeito { filter:contrast(1.15) saturate(.55) brightness(.95); }
+  .cam canvas { position:absolute; inset:0; width:100%; height:100%; opacity:.18; mix-blend-mode:screen; pointer-events:none; }
+  .cam .hud { position:absolute; inset:0; padding:calc(.8 * var(--u)) calc(1.2 * var(--u)); font-size:calc(2 * var(--u));
+    color:#fff; text-shadow:0 0 calc(.4 * var(--u)) #000; display:flex; flex-direction:column; justify-content:space-between; pointer-events:none; }
+  .cam .hud div { display:flex; justify-content:space-between; }
+  .cam .hud::before { content:''; position:absolute; inset:0; background:repeating-linear-gradient(0deg, rgba(0,0,0,.35) 0 1px, transparent 1px 3px); }
+  .cabeca { animation:cabeca 4s ease-in-out infinite; transform-origin:100px 120px; }
+  .rastreando .cabeca { animation:cabeca 1.4s ease-in-out infinite; }
+  @keyframes cabeca { 0%,100% { transform:rotate(-2deg) translateY(0); } 50% { transform:rotate(2.5deg) translateY(2px); } }
+  .maos { animation:digita .18s steps(2) infinite; }
+  @keyframes digita { 50% { transform:translateY(-2px); } }
+
+  /* mira no centro do mapa */
+  .mira { position:absolute; left:50%; top:58%; width:calc(40 * var(--u)); height:calc(40 * var(--u)); transform:translate(-50%, -50%);
+    pointer-events:none; opacity:0; transition:opacity .4s; }
+  .rastreando .mira { opacity:1; }
+  .mira svg { width:100%; height:100%; animation:mira 3s linear infinite; }
+  @keyframes mira { to { transform:rotate(360deg); } }
+  .alvo-ponto { position:absolute; left:50%; top:58%; width:calc(5 * var(--u)); height:calc(5 * var(--u)); transform:translate(-50%, -50%);
+    border-radius:50%; background:#ff3b30; box-shadow:0 0 0 0 rgba(255,59,48,.7); opacity:0; }
+  .achou .alvo-ponto { opacity:1; animation:onda 1.2s infinite; }
+  @keyframes onda { to { box-shadow:0 0 0 calc(10 * var(--u)) rgba(255,59,48,0); } }
+
+  /* resultado */
+  .resultado { position:absolute; left:calc(6 * var(--u)); right:calc(6 * var(--u)); top:calc(117 * var(--u));
+    background:rgba(0,0,0,.85); border:calc(.4 * var(--u)) solid #ff3b30; border-radius:calc(2 * var(--u));
+    padding:calc(1.6 * var(--u)) calc(2 * var(--u)); text-align:center; display:none; }
+  .achou .resultado { display:block; animation:entra .35s; }
+  @keyframes entra { 0% { transform:scale(1.3); opacity:0 } 100% { transform:none; opacity:1 } }
+  .resultado h2 { font:normal calc(5.4 * var(--u)) Impact, sans-serif; color:#ff3b30; letter-spacing:calc(.4 * var(--u)); }
+  .resultado .quem { display:flex; align-items:center; justify-content:center; gap:calc(2 * var(--u)); margin:calc(1 * var(--u)) 0; }
+  .resultado img, .resultado .sem { display:inline-block; width:calc(9 * var(--u)); height:calc(9 * var(--u)); border-radius:50%; object-fit:cover;
+    border:calc(.4 * var(--u)) solid #ff3b30; background:#333; flex:none; }
+  .resultado .nome { font:bold calc(5 * var(--u)) Arial, sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .resultado .arroba { font:bold calc(3.4 * var(--u)) Arial, sans-serif; color:#ffe14d; }
+  .resultado .cidade { font:normal calc(7 * var(--u)) Impact, sans-serif; color:#fff; }
+  .resultado small { display:block; font-size:calc(2.2 * var(--u)); color:#9ca3af; margin-top:calc(.6 * var(--u)); }
+
+  .fila { position:absolute; top:calc(40.5 * var(--u)); right:calc(3 * var(--u)); background:rgba(0,0,0,.6);
+    border-radius:calc(3 * var(--u)); padding:calc(.6 * var(--u)) calc(2 * var(--u)); font-size:calc(2.6 * var(--u)); color:#ffd166; }
+  .fila:empty { display:none; }
+
+  /* parte de baixo */
+  .baixo { position:absolute; left:0; right:0; bottom:0; display:flex; flex-direction:column; gap:calc(1.2 * var(--u)); }
+  .caixa { margin:0 calc(3 * var(--u)); background:rgba(0,0,0,.78); border:calc(.25 * var(--u)) solid rgba(57,255,106,.5);
+    border-radius:calc(2 * var(--u)); padding:calc(1.2 * var(--u)) calc(2 * var(--u)); text-align:center; }
+  .caixa h3 { font:normal calc(3.6 * var(--u)) Impact, sans-serif; white-space:nowrap; color:#fff; letter-spacing:calc(.3 * var(--u)); }
+  .caixa h3 span { color:#ff3b30; }
+  .caixa p { font-size:calc(2.5 * var(--u)); color:var(--verde); margin-top:calc(.4 * var(--u)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rodape { background:linear-gradient(90deg,#ffb703,#ffd166,#ffb703); color:#1a1300; text-align:center;
+    font:normal calc(3.4 * var(--u)) Impact, sans-serif; padding:calc(1.3 * var(--u)) calc(2 * var(--u)); white-space:nowrap; }
+  .rodape b { font-weight:normal; color:#7a0000; }
+  .rodape:empty { display:none; }
+</style>
+</head>
+<body>
+<div class="tela" id="tela">
+  <div id="mapa"></div>
+  <div class="tinta"></div>
+  <div class="linhas"></div>
+
+  <div class="topo mono"><b id="marca">TEUZS GAMES</b><span><span class="ponto"></span> RASTREADOR ONLINE</span></div>
+
+  <div class="terminal mono" id="terminal"></div>
+
+  <div class="cam" id="cam">
+    <video id="video" class="efeito" autoplay muted loop playsinline></video>
+    <!-- "webcam" desenhada: cara de capuz com máscara estilo V de Vingança, digitando no escuro -->
+    <svg class="cena efeito" viewBox="0 0 200 150" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <radialGradient id="luz" cx="50%" cy="85%" r="80%"><stop offset="0" stop-color="#1d5c34"/><stop offset=".6" stop-color="#0b1f14"/><stop offset="1" stop-color="#030806"/></radialGradient>
+        <radialGradient id="pele" cx="45%" cy="40%" r="65%"><stop offset="0" stop-color="#fbf4ea"/><stop offset=".75" stop-color="#e6d9c6"/><stop offset="1" stop-color="#b9a98f"/></radialGradient>
+      </defs>
+      <rect width="200" height="150" fill="url(#luz)"/>
+      <rect x="140" y="20" width="44" height="30" rx="2" fill="#0a1a10" stroke="#1f4d2e"/>
+      <g fill="#39ff6a" opacity=".5"><rect x="145" y="25" width="24" height="2"/><rect x="145" y="30" width="32" height="2"/><rect x="145" y="35" width="18" height="2"/><rect x="145" y="40" width="28" height="2"/></g>
+      <path d="M30 150 C35 118 60 104 100 104 C140 104 165 118 170 150 Z" fill="#111"/>
+      <g class="cabeca">
+        <path d="M55 112 C48 70 62 28 100 26 C138 28 152 70 145 112 C130 104 70 104 55 112 Z" fill="#161616"/>
+        <path d="M68 60 C68 38 84 34 100 34 C116 34 132 38 132 60 C132 88 120 112 100 116 C80 112 68 88 68 60 Z" fill="url(#pele)"/>
+        <path d="M76 52 C82 44 92 45 96 50" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M124 52 C118 44 108 45 104 50" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M79 60 C84 56 91 56 95 60 C90 62 84 62 79 60 Z" fill="#111"/>
+        <path d="M121 60 C116 56 109 56 105 60 C110 62 116 62 121 60 Z" fill="#111"/>
+        <ellipse cx="82" cy="74" rx="7" ry="4" fill="#e8a3a3" opacity=".7"/>
+        <ellipse cx="118" cy="74" rx="7" ry="4" fill="#e8a3a3" opacity=".7"/>
+        <path d="M100 58 L97 76 L101 78" stroke="#8c7c66" stroke-width="1.2" fill="none"/>
+        <path d="M100 84 C94 82 86 82 80 76 C84 80 90 86 100 86 C110 86 116 80 120 76 C114 82 106 82 100 84 Z" fill="#111"/>
+        <path d="M88 92 C94 96 106 96 112 92" stroke="#6b5b4a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M100 98 L97 110 L100 114 L103 110 Z" fill="#111"/>
+      </g>
+      <g class="maos"><rect x="55" y="132" width="26" height="10" rx="4" fill="#1a1a1a"/><rect x="119" y="132" width="26" height="10" rx="4" fill="#1a1a1a"/></g>
+      <rect x="40" y="140" width="120" height="10" fill="#0d0d0d" stroke="#1f4d2e" stroke-width=".8"/>
+    </svg>
+    <canvas id="ruido" width="160" height="128"></canvas>
+    <div class="hud mono"><div><span><span class="ponto"></span> REC</span><span>CAM 01</span></div><div><span id="hora"></span><span>LIVE</span></div></div>
+  </div>
+  <div class="fila mono" id="fila"></div>
+
+  <div class="mira"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="#ff3b30" stroke-width="1.5" stroke-dasharray="12 6"/>
+    <circle cx="50" cy="50" r="22" fill="none" stroke="#ff3b30" stroke-width="1"/>
+    <path d="M50 2 V22 M50 78 V98 M2 50 H22 M78 50 H98" stroke="#ff3b30" stroke-width="2"/></svg></div>
+  <div class="alvo-ponto"></div>
+
+  <div class="resultado" id="resultado">
+    <h2>🎯 ALVO LOCALIZADO</h2>
+    <div class="quem"><span id="resFoto"></span><div style="min-width:0;text-align:left"><div class="nome" id="resNome"></div><div class="arroba" id="resArroba"></div></div></div>
+    <div class="cidade" id="resCidade"></div>
+    <small>localização sorteada · é só brincadeira</small>
+  </div>
+
+  <div class="baixo">
+    <div class="caixa">
+      <h3>🌹 MANDE UMA <span>ROSA</span> E EU TE LOCALIZO</h3>
+      <p class="mono" id="ultimos">&gt; nenhum alvo ainda...</p>
+    </div>
+    <div class="rodape" id="rodape"></div>
+  </div>
+</div>
+
+<script src="/leaflet/leaflet.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+
+// ---------- mapa de satélite (Esri) com nomes de cidades por cima ----------
+const BRASIL = [-14.5, -52], ZOOM_BRASIL = 4;
+const mapa = L.map('mapa', { zoomControl: false, attributionControl: true, zoomSnap: 0.25,
+  dragging: false, scrollWheelZoom: false, doubleClickZoom: false, keyboard: false }).setView(BRASIL, ZOOM_BRASIL);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  { maxZoom: 18, attribution: 'Imagens © Esri' }).addTo(mapa);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+  { maxZoom: 18 }).addTo(mapa);
+// o centro do mapa fica um pouco abaixo do meio (onde está a mira)
+function centroComMira(lat, lon, zoom) {
+  const p = mapa.project([lat, lon], zoom);
+  return mapa.unproject(p.subtract([0, mapa.getSize().y * .08]), zoom);
+}
+
+// ---------- webcam: usa public/webcam.mp4 se existir; senão, o desenho ----------
+const video = $('video');
+video.onloadeddata = () => $('cam').classList.add('com-video');
+video.src = '/webcam.mp4';
+const ruido = $('ruido'), rg = ruido.getContext('2d');
+setInterval(() => {
+  const img = rg.createImageData(ruido.width, ruido.height);
+  for (let i = 0; i < img.data.length; i += 4) { const v = Math.random() * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
+  rg.putImageData(img, 0, 0);
+  $('hora').textContent = new Date().toLocaleTimeString('pt-BR');
+}, 90);
+
+// ---------- terminal ----------
+const terminal = $('terminal');
+function linha(texto, classe = '') {
+  const d = document.createElement('div');
+  terminal.querySelectorAll('.cursor').forEach(e => e.classList.remove('cursor'));
+  d.className = 't ' + classe;
+  d.textContent = texto;
+  terminal.appendChild(d);
+  while (terminal.children.length > 11) terminal.firstElementChild.remove();
+  return d;
+}
+async function digitar(texto, classe = '', vel = 22) {
+  const d = linha('', classe + ' cursor');
+  for (const ch of texto) { d.textContent += ch; if (ch !== ' ') tom(1800 + Math.random() * 400, .015, 'square', .04); await esperar(vel); }
+  d.classList.remove('cursor');
+  return d;
+}
+
+// ---------- som ----------
+let volume = 30, audio;
+function tom(freq, dur, tipo = 'sine', ganho = .25) {
+  if (volume <= 0) return;
+  try {
+    audio = audio || new AudioContext();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = tipo; o.frequency.value = freq;
+    g.gain.setValueAtTime(ganho * volume / 100, audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, audio.currentTime + dur);
+    o.connect(g).connect(audio.destination);
+    o.start(); o.stop(audio.currentTime + dur);
+  } catch {}
+}
+
+// ---------- fila: um alvo por vez ----------
+let segNaTela = 6;
+const fila = [];
+let ocupado = false;
+function novoAlvo(m) {
+  if (fila.some(f => f.id === m.id)) return;
+  fila.push(m);
+  atualizarFila();
+}
+function atualizarFila() { $('fila').textContent = fila.length ? `⏳ FILA: ${fila.length}` : ''; }
+
+async function rastrear(m) {
+  const tela = document.body, c = m.cidade, quem = m.arroba ? '@' + m.arroba : m.nome;
+  tela.classList.remove('achou');
+  await digitar(`> novo alvo: ${quem}`, 'forte');
+  await digitar('> iniciando rastreamento...');
+  tela.classList.add('rastreando');
+  // voo: do Brasil até a cidade sorteada
+  mapa.flyTo(centroComMira(c.lat, c.lon, 13), 13, { duration: 5.5 });
+  await digitar('> conectando satélite BR-04... OK');
+  const barra = linha('> triangulando sinal [..........] 0%');
+  for (let i = 1; i <= 10; i++) {
+    barra.textContent = `> triangulando sinal [${'█'.repeat(i)}${'.'.repeat(10 - i)}] ${i * 10}%`;
+    tom(500 + i * 60, .05, 'square', .06);
+    await esperar(150);
+  }
+  await digitar(`> região: ${c.uf}`);
+  await digitar(`> cidade: ${c.nome.toUpperCase()}`, 'forte');
+  await esperar(600);
+  await digitar('> ALVO LOCALIZADO ✔', 'alerta');
+
+  $('resFoto').innerHTML = m.foto ? `<img src="${esc(m.foto)}">` : '<span class="sem"></span>';
+  $('resNome').textContent = m.nome;
+  $('resArroba').textContent = m.arroba ? '@' + m.arroba : '';
+  $('resCidade').textContent = `📍 ${c.nome} - ${c.uf}`;
+  tela.classList.add('achou');
+  for (let i = 0; i < 3; i++) { tom(1400, .12, 'square', .12); await esperar(180); }
+
+  await esperar(segNaTela * 1000);
+  tela.classList.remove('achou', 'rastreando');
+  linha('> sessão encerrada.');
+  mapa.flyTo(BRASIL, ZOOM_BRASIL, { duration: 2.5 });
+  await esperar(2600);
+}
+
+async function rodarFila() {
+  linha('> sistema pronto.');
+  linha('> aguardando rosa...', 'cursor');
+  while (true) {
+    if (!fila.length) { await esperar(300); continue; }
+    const m = fila.shift();
+    atualizarFila();
+    await rastrear(m);
+    if (!fila.length) linha('> aguardando rosa...', 'cursor');
+  }
+}
+rodarFila();
+
+// ---------- informações ----------
+function atualizarInfo(p) {
+  segNaTela = p.segundosNaTela;
+  volume = Number(new URLSearchParams(location.search).get('volume') ?? p.volume ?? 30);
+  $('marca').textContent = p.marca || '';
+  $('rodape').innerHTML = p.contato ? `🎮 Jogo interativo pra sua live? <b>WhatsApp ${esc(p.contato)}</b>` : '';
+  $('ultimos').textContent = p.ultimos.length
+    ? '> últimos: ' + p.ultimos.map(a => `${a.arroba ? '@' + a.arroba : a.nome} (${a.cidade.uf})`).join(' · ')
+    : '> nenhum alvo ainda...';
+}
+
+function conectar() {
+  const ws = new WebSocket(`ws://${location.host}`);
+  ws.onmessage = ev => {
+    const m = JSON.parse(ev.data);
+    if (m.tipo === 'info') atualizarInfo(m);
+    if (m.tipo === 'alvo') novoAlvo(m);
+  };
+  ws.onclose = () => setTimeout(conectar, 2000);
+}
+conectar();
+</script>
+</body>
+</html>
