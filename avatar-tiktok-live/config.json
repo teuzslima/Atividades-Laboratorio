@@ -1,0 +1,13 @@
+{
+  "usuarioTikTok": "teuzskkj",
+  "porta": 3001,
+  "marca": "TEUZS GAMES",
+  "contato": "(75) 98212-0172",
+  "chaveEuler": "",
+  "volume": 30,
+  "segundosPorPresente": 4,
+  "maxSegundos": 60,
+  "dancas": {
+    "padrao": "jamal"
+  }
+}

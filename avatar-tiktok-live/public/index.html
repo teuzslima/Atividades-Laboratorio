@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avatar da Live</title>
+<style>
+  /* 1 unidade = 1% da largura de uma tela em pé (9:16) que cabe na janela */
+  :root { --u:min(1vw, 0.5625vh); }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#000; color:#fff;
+    font-family:Impact, 'Arial Black', sans-serif; }
+  .tela { position:relative; width:calc(100 * var(--u)); height:calc(177.78 * var(--u)); margin:0 auto; overflow:hidden; }
+  canvas { position:absolute; inset:0; width:100% !important; height:100% !important; display:block; }
+
+  /* nome de quem mandou, em cima do boneco (como no Roblox) */
+  .placa { position:absolute; left:0; right:0; top:calc(22 * var(--u)); text-align:center; pointer-events:none;
+    transition:opacity .3s; }
+  .placa .nome { font-size:calc(8 * var(--u)); color:#ff5a4e; -webkit-text-stroke:calc(.3 * var(--u)) #fff;
+    text-shadow:0 calc(.6 * var(--u)) 0 rgba(0,0,0,.35); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    padding:0 calc(4 * var(--u)); }
+  .placa .sub { font-size:calc(6 * var(--u)); color:#ffe14d; -webkit-text-stroke:calc(.25 * var(--u)) #7a4a00; }
+  .placa.oculta { opacity:0; }
+  .placa.pula { animation:pula .35s; }
+  @keyframes pula { 50% { transform:scale(1.15); } }
+
+  .marca { position:absolute; top:calc(3 * var(--u)); left:calc(3 * var(--u)); font-size:calc(3.4 * var(--u));
+    line-height:1.05; color:#ffd166; text-shadow:0 calc(.4 * var(--u)) 0 #000; }
+  .marca small { display:block; font:bold calc(1.7 * var(--u)) Arial, sans-serif; color:#fff; letter-spacing:calc(.2 * var(--u)); }
+  .marca:empty { display:none; }
+
+  .tempo { position:absolute; top:calc(3 * var(--u)); right:calc(3 * var(--u)); background:rgba(0,0,0,.55);
+    border-radius:calc(3 * var(--u)); padding:calc(1 * var(--u)) calc(2.5 * var(--u)); font-size:calc(3.2 * var(--u));
+    color:#fff; visibility:hidden; }
+  .tempo span { color:#4ade80; }
+  .dancando .tempo { visibility:visible; }
+
+  /* avisos de quem mandou */
+  .avisos { position:absolute; left:calc(3 * var(--u)); bottom:calc(39 * var(--u)); width:70%; display:flex;
+    flex-direction:column-reverse; gap:calc(1.2 * var(--u)); }
+  .aviso { display:flex; align-items:center; gap:calc(2 * var(--u)); background:rgba(0,0,0,.55);
+    border-radius:calc(10 * var(--u)); padding:calc(1 * var(--u)) calc(3 * var(--u)) calc(1 * var(--u)) calc(1 * var(--u));
+    font-family:Arial, sans-serif; animation:entra 4s forwards; }
+  .aviso img, .aviso .sem { width:calc(7 * var(--u)); height:calc(7 * var(--u)); border-radius:50%; object-fit:cover;
+    background:#666; flex:none; }
+  .aviso b { font-size:calc(3.3 * var(--u)); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .aviso span { font-size:calc(2.6 * var(--u)); color:#ddd; }
+  .aviso .x { margin-left:auto; font:italic calc(6 * var(--u)) Impact, sans-serif; text-shadow:0 calc(.4 * var(--u)) 0 #000; }
+  @keyframes entra { 0% { opacity:0; transform:translateX(calc(-10 * var(--u))) } 8%,85% { opacity:1; transform:none } 100% { opacity:0 } }
+
+  /* parte de baixo: como jogar + top + contato */
+  .baixo { position:absolute; left:0; right:0; bottom:0; display:flex; flex-direction:column; gap:calc(1.4 * var(--u)); }
+  .caixa { margin:0 calc(3 * var(--u)); background:rgba(17,20,26,.82); border-radius:calc(2.5 * var(--u));
+    padding:calc(1.4 * var(--u)) calc(2.5 * var(--u)); }
+  .caixa h3 { font-weight:normal; font-size:calc(3 * var(--u)); color:#ffd166; text-align:center; letter-spacing:calc(.4 * var(--u));
+    margin-bottom:calc(.8 * var(--u)); }
+  .como { display:flex; justify-content:center; gap:calc(4 * var(--u)); font-size:calc(3.1 * var(--u)); white-space:nowrap; }
+  .top { display:flex; justify-content:space-around; font:calc(2.8 * var(--u)) Arial, sans-serif; gap:calc(2 * var(--u)); }
+  .top div { display:flex; align-items:center; gap:calc(1 * var(--u)); min-width:0; }
+  .top img, .top .sem { width:calc(4.6 * var(--u)); height:calc(4.6 * var(--u)); border-radius:50%; object-fit:cover; background:#555; flex:none; }
+  .top .nm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:calc(16 * var(--u)); }
+  .top .vazio { color:#999; }
+  .rodape { background:linear-gradient(90deg,#ffb703,#ffd166,#ffb703); color:#1a1300; text-align:center;
+    font-size:calc(3.4 * var(--u)); padding:calc(1.3 * var(--u)) calc(2 * var(--u)); white-space:nowrap; }
+  .rodape b { font-weight:normal; color:#7a0000; }
+  .rodape:empty { display:none; }
+</style>
+<script type="importmap">{ "imports": { "three": "/three/build/three.module.js" } }</script>
+</head>
+<body>
+<div class="tela" id="tela">
+  <div class="marca" id="marca"></div>
+  <div class="tempo">💃 <span id="tempo">0s</span></div>
+  <div class="placa oculta" id="placa"><div class="nome" id="placaNome"></div><div class="sub" id="placaSub"></div></div>
+  <div class="avisos" id="avisos"></div>
+  <div class="baixo">
+    <div class="caixa">
+      <h3>MANDE UM PRESENTE E O BONECO DANÇA!</h3>
+      <div class="como"><span>🎁 Qualquer presente = Passinho do Jamal</span></div>
+      <div class="como" style="font-size:calc(2.6 * var(--u)); color:#ccc; margin-top:calc(.6 * var(--u))"><span>🌹 Cada rosa = <span id="seg">4</span> segundos de dança · combo soma tempo</span></div>
+    </div>
+    <div class="caixa">
+      <h3>🏆 QUEM MAIS FEZ DANÇAR</h3>
+      <div class="top" id="top"></div>
+    </div>
+    <div class="rodape" id="rodape"></div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const NOMES_DANCA = { jamal: 'PASSINHO DO JAMAL!', giro: 'GIRANDO!', pulo: 'PULA PULA!', aura: '+1000 AURA' };
+
+// ---------- cena: quarto colorido ----------
+const tela = $('tela');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+tela.prepend(renderer.domElement);
+
+const cena = new THREE.Scene();
+cena.background = new THREE.Color('#bfe3ff');
+cena.fog = new THREE.Fog('#bfe3ff', 35, 80);
+const camera = new THREE.PerspectiveCamera(42, 9 / 16, 0.1, 100);
+camera.position.set(0, 5.5, 24);
+camera.lookAt(0, 3.6, 0);
+
+cena.add(new THREE.HemisphereLight('#ffffff', '#b8a6ff', 1.6));
+const sol = new THREE.DirectionalLight('#ffffff', 1.6);
+sol.position.set(4, 10, 8);
+sol.castShadow = true;
+sol.shadow.mapSize.set(1024, 1024);
+cena.add(sol);
+
+// chão xadrez em tons pastel
+const cores = ['#ffd6e8', '#c9f2ff', '#fff4c2', '#d9ffd6', '#e6d9ff', '#ffe0cc'];
+for (let x = -6; x < 6; x++) for (let z = -8; z < 6; z++) {
+  const piso = new THREE.Mesh(new THREE.BoxGeometry(2, .2, 2),
+    new THREE.MeshLambertMaterial({ color: cores[(((x * 7 + z * 3) % cores.length) + cores.length) % cores.length] }));
+  piso.position.set(x * 2 + 1, -.1, z * 2 + 1);
+  piso.receiveShadow = true;
+  cena.add(piso);
+}
+// parede do fundo com faixa neon e blocos coloridos
+const parede = new THREE.Mesh(new THREE.BoxGeometry(30, 14, .5), new THREE.MeshLambertMaterial({ color: '#d7ecff' }));
+parede.position.set(0, 7, -15);
+cena.add(parede);
+const neon = new THREE.Mesh(new THREE.BoxGeometry(30, .3, .2), new THREE.MeshBasicMaterial({ color: '#ff3fa4' }));
+neon.position.set(0, 5.2, -14.6);
+cena.add(neon);
+const arcoiris = ['#ff4d4d', '#ff9f1a', '#ffe14d', '#3ddc84', '#29b6f6', '#7c4dff', '#ff4fb4'];
+for (let i = 0; i < 14; i++) {
+  const h = 1 + ((i * 37) % 5) * .35;
+  const bloco = new THREE.Mesh(new THREE.BoxGeometry(1.1, h, .6),
+    new THREE.MeshLambertMaterial({ color: arcoiris[i % arcoiris.length] }));
+  bloco.position.set(-8.5 + i * 1.3, 6.4 + h / 2, -14.4);
+  cena.add(bloco);
+}
+// palco redondo
+const palco = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.2, .35, 48), new THREE.MeshLambertMaterial({ color: '#ffffff' }));
+palco.position.y = .17;
+palco.receiveShadow = true;
+cena.add(palco);
+const anel = new THREE.Mesh(new THREE.TorusGeometry(3.1, .08, 8, 64), new THREE.MeshBasicMaterial({ color: '#ff3fa4' }));
+anel.rotation.x = Math.PI / 2;
+anel.position.y = .36;
+cena.add(anel);
+
+// ---------- boneco estilo bloco (pivôs nos ombros e quadris) ----------
+function material(cor) { return new THREE.MeshLambertMaterial({ color: cor }); }
+function peca(l, a, p, cor, pai, x, y, z, deslocY) {
+  // Grupo = articulação; a caixa fica pendurada abaixo dela (deslocY)
+  const junta = new THREE.Group();
+  junta.position.set(x, y, z);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(l, a, p), Array.isArray(cor) ? cor : material(cor));
+  m.position.y = deslocY;
+  m.castShadow = true;
+  junta.add(m);
+  pai.add(junta);
+  return junta;
+}
+
+function rostoTextura() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = '#f5cd30'; g.fillRect(0, 0, 128, 128);
+  g.fillStyle = '#111';
+  g.beginPath(); g.ellipse(44, 52, 7, 12, 0, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.ellipse(84, 52, 7, 12, 0, 0, Math.PI * 2); g.fill();
+  g.lineWidth = 7; g.lineCap = 'round';
+  g.beginPath(); g.arc(64, 70, 26, .2 * Math.PI, .8 * Math.PI); g.stroke();
+  return new THREE.CanvasTexture(c);
+}
+
+const boneco = new THREE.Group();
+cena.add(boneco);
+const corpo = new THREE.Group(); // tudo acima do quadril, para quicar/girar
+corpo.position.y = 2;
+boneco.add(corpo);
+const PELE = '#f5cd30', CAMISA = '#1f2937', CALCA = '#111827';
+const tronco = peca(2, 2, 1, CAMISA, corpo, 0, 0, 0, 1);
+// gravata e detalhes da camisa
+const gravata = new THREE.Mesh(new THREE.BoxGeometry(.3, 1.3, .05), material('#e11d48'));
+gravata.position.set(0, 1.25, .53);
+tronco.add(gravata);
+const cabeca = new THREE.Group();
+cabeca.position.set(0, 2, 0);
+corpo.add(cabeca);
+const rosto = material(PELE);
+const cab = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2),
+  [rosto, rosto, rosto, rosto, new THREE.MeshLambertMaterial({ map: rostoTextura() }), rosto]);
+cab.position.y = .65;
+cab.castShadow = true;
+cabeca.add(cab);
+// chapéu
+const aba = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, .12, 24), material('#0b0b0b'));
+aba.position.y = 1.3;
+cabeca.add(aba);
+const copa = new THREE.Mesh(new THREE.CylinderGeometry(.62, .7, .7, 24), material('#0b0b0b'));
+copa.position.y = 1.68;
+cabeca.add(copa);
+const fita = new THREE.Mesh(new THREE.CylinderGeometry(.71, .71, .15, 24), material('#e11d48'));
+fita.position.y = 1.43;
+cabeca.add(fita);
+
+const bracoE = peca(1, 2, 1, [material(PELE), material(PELE), material(CAMISA), material(PELE), material(CAMISA), material(CAMISA)], corpo, -1.5, 1.9, 0, -.9);
+const bracoD = peca(1, 2, 1, [material(PELE), material(PELE), material(CAMISA), material(PELE), material(CAMISA), material(CAMISA)], corpo, 1.5, 1.9, 0, -.9);
+const pernaE = peca(1, 2, 1, CALCA, boneco, -.5, 2, 0, -1);
+const pernaD = peca(1, 2, 1, CALCA, boneco, .5, 2, 0, -1);
+boneco.position.y = .35;
+
+// ---------- danças ----------
+// Cada dança recebe o tempo (t, em segundos) e mexe as juntas.
+const BPM = 128, batida = t => t * BPM / 60 * Math.PI; // meia volta por batida
+function zerarPose() {
+  for (const j of [bracoE, bracoD, pernaE, pernaD, cabeca, corpo]) j.rotation.set(0, 0, 0);
+  corpo.position.set(0, 2, 0);
+  boneco.position.set(0, .35, 0);
+  boneco.rotation.set(0, 0, 0);
+}
+const DANCAS = {
+  // Passinho do Jamal: passinho de lado, joelho subindo, braços balançando cruzado e cabeça no ritmo
+  jamal(t) {
+    const b = batida(t), s = Math.sin(b), c = Math.cos(b);
+    boneco.position.x = Math.sin(b / 2) * .9;                        // desliza de um lado pro outro
+    boneco.position.y = .35 + Math.abs(s) * .25;                    // quica a cada batida
+    corpo.rotation.y = Math.sin(b / 2) * .45;                       // gingado do tronco
+    corpo.rotation.z = -Math.sin(b / 2) * .12;
+    pernaE.rotation.x = -Math.max(0, s) * 1.1;                      // joelho esquerdo sobe
+    pernaD.rotation.x = -Math.max(0, -s) * 1.1;                     // joelho direito sobe
+    pernaE.rotation.z = -.15 - Math.max(0, s) * .2;
+    pernaD.rotation.z = .15 + Math.max(0, -s) * .2;
+    bracoE.rotation.x = -s * 1.3;                                   // braços cruzando na frente
+    bracoD.rotation.x = s * 1.3;
+    bracoE.rotation.z = -.35 - Math.abs(c) * .5;
+    bracoD.rotation.z = .35 + Math.abs(c) * .5;
+    // a cada 8 batidas: pose do Jamal (mão pra cima apontando)
+    if (Math.floor(b / Math.PI) % 8 === 7) { bracoD.rotation.set(-2.9, 0, .2); bracoE.rotation.set(0, 0, -1.2); }
+    cabeca.rotation.x = Math.sin(b * 2) * .15;
+    cabeca.rotation.y = -corpo.rotation.y * .6;
+  },
+  giro(t) {
+    const b = batida(t);
+    boneco.rotation.y = t * 5;
+    boneco.position.y = .35 + Math.abs(Math.sin(b)) * .3;
+    bracoE.rotation.z = -1.5; bracoD.rotation.z = 1.5;
+    pernaE.rotation.x = Math.sin(b) * .4; pernaD.rotation.x = -Math.sin(b) * .4;
+    cabeca.rotation.z = Math.sin(b) * .2;
+  },
+  pulo(t) {
+    const b = batida(t), s = Math.abs(Math.sin(b));
+    boneco.position.y = .35 + s * 1.6;
+    bracoE.rotation.z = -.3 - s * 2.6; bracoD.rotation.z = .3 + s * 2.6;
+    pernaE.rotation.z = -s * .5; pernaD.rotation.z = s * .5;
+  },
+  aura(t) {
+    const b = batida(t);
+    boneco.position.y = .35 + 1.2 + Math.sin(t * 2) * .3;
+    boneco.rotation.y = Math.sin(t) * .4;
+    bracoE.rotation.set(0, 0, -.6 - Math.sin(b) * .2); bracoD.rotation.set(0, 0, .6 + Math.sin(b) * .2);
+    cabeca.rotation.x = -.25;
+  },
+};
+function parado(t) {
+  // respirando de leve
+  corpo.position.y = 2 + Math.sin(t * 2) * .03;
+  bracoE.rotation.z = -.08 - Math.sin(t * 2) * .03;
+  bracoD.rotation.z = .08 + Math.sin(t * 2) * .03;
+  cabeca.rotation.y = Math.sin(t * .7) * .25;
+}
+
+// ---------- confete ----------
+const confetes = [];
+function soltarConfete(qtd) {
+  for (let i = 0; i < Math.min(80, 15 + qtd * 5); i++) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(.18, .28),
+      new THREE.MeshBasicMaterial({ color: arcoiris[i % arcoiris.length], side: THREE.DoubleSide }));
+    m.position.set((Math.random() - .5) * 8, 9 + Math.random() * 3, (Math.random() - .5) * 4);
+    m.userData = { v: -1.5 - Math.random() * 2, giro: Math.random() * 6 };
+    cena.add(m);
+    confetes.push(m);
+  }
+}
+
+// ---------- estado do jogo ----------
+let segPorPresente = 4, maxSeg = 60, volume = 30;
+let fimDanca = 0, dancaAtual = 'jamal', inicioDanca = 0;
+
+// Batidinha simples de fundo durante a dança (sem música com direitos autorais)
+let audio, proximaBatida = 0;
+function batidaAudio(agora) {
+  if (volume <= 0 || agora < proximaBatida) return;
+  proximaBatida = agora + 60 / BPM;
+  try {
+    audio = audio || new AudioContext();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.setValueAtTime(140, audio.currentTime);
+    o.frequency.exponentialRampToValueAtTime(40, audio.currentTime + .12);
+    g.gain.setValueAtTime(.6 * volume / 100, audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, audio.currentTime + .15);
+    o.connect(g).connect(audio.destination);
+    o.start(); o.stop(audio.currentTime + .16);
+  } catch {}
+}
+
+function presente(m) {
+  const agora = performance.now() / 1000;
+  if (fimDanca < agora || m.danca !== dancaAtual) { inicioDanca = agora; dancaAtual = m.danca; }
+  fimDanca = Math.min(Math.max(fimDanca, agora) + segPorPresente * m.qtd, agora + maxSeg);
+  $('placaNome').textContent = m.nome;
+  $('placaSub').textContent = `${NOMES_DANCA[m.danca]} x${m.qtd}`;
+  const placa = $('placa');
+  placa.classList.remove('oculta', 'pula'); void placa.offsetWidth; placa.classList.add('pula');
+  soltarConfete(m.qtd);
+  mostrarAviso(m);
+}
+
+const MAX_AVISOS = 2;
+function mostrarAviso(m) {
+  const caixa = $('avisos');
+  let el = [...caixa.children].find(a => a.dataset.nome === m.nome);
+  if (el) {
+    el.dataset.qtd = Number(el.dataset.qtd) + m.qtd;
+    el.querySelector('.x').textContent = 'x' + el.dataset.qtd;
+    clearTimeout(el.timer);
+    el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  } else {
+    el = document.createElement('div');
+    el.className = 'aviso';
+    el.dataset.nome = m.nome;
+    el.dataset.qtd = m.qtd;
+    el.innerHTML = (m.foto ? `<img src="${esc(m.foto)}">` : '<div class="sem"></div>')
+      + `<div style="min-width:0"><b>${esc(m.nome)}</b><span>enviou ${esc(m.presente || 'presente')} 🎁</span></div>`
+      + `<div class="x">x${m.qtd}</div>`;
+    while (caixa.children.length >= MAX_AVISOS) caixa.firstElementChild.remove();
+  }
+  caixa.append(el);
+  el.timer = setTimeout(() => el.remove(), 4000);
+}
+
+function atualizarInfo(p) {
+  segPorPresente = p.segundosPorPresente; maxSeg = p.maxSegundos;
+  $('seg').textContent = segPorPresente;
+  volume = Number(new URLSearchParams(location.search).get('volume') ?? p.volume ?? 30);
+  $('marca').innerHTML = p.marca ? `${esc(p.marca)}<small>JOGOS INTERATIVOS</small>` : '';
+  $('rodape').innerHTML = p.contato ? `🎮 Jogo interativo pra sua live? <b>WhatsApp ${esc(p.contato)}</b>` : '';
+  const medalhas = ['🥇', '🥈', '🥉'];
+  $('top').innerHTML = p.top.length
+    ? p.top.map((e, i) => `<div>${medalhas[i]}${e.foto ? `<img src="${esc(e.foto)}">` : '<span class="sem"></span>'}`
+        + `<span class="nm">${esc(e.nome)}</span><b>${e.qtd}</b></div>`).join('')
+    : '<span class="vazio">Seja o primeiro a fazer o boneco dançar!</span>';
+}
+
+// ---------- loop ----------
+function ajustarTamanho() {
+  const w = tela.clientWidth, h = tela.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', ajustarTamanho);
+ajustarTamanho();
+
+const relogio = new THREE.Clock();
+function quadro() {
+  const dt = Math.min(relogio.getDelta(), .05), agora = performance.now() / 1000;
+  zerarPose();
+  const dancando = agora < fimDanca;
+  document.body.classList.toggle('dancando', dancando);
+  if (dancando) {
+    DANCAS[dancaAtual](agora - inicioDanca);
+    $('tempo').textContent = Math.ceil(fimDanca - agora) + 's';
+    batidaAudio(agora);
+    anel.material.color.setHSL((agora * .3) % 1, 1, .6);
+  } else {
+    parado(agora);
+    $('placa').classList.add('oculta');
+  }
+  for (let i = confetes.length - 1; i >= 0; i--) {
+    const c = confetes[i];
+    c.position.y += c.userData.v * dt;
+    c.rotation.x += c.userData.giro * dt; c.rotation.y += c.userData.giro * dt;
+    if (c.position.y < 0) { cena.remove(c); c.geometry.dispose(); c.material.dispose(); confetes.splice(i, 1); }
+  }
+  renderer.render(cena, camera);
+  requestAnimationFrame(quadro);
+}
+quadro();
+
+function conectar() {
+  const ws = new WebSocket(`ws://${location.host}`);
+  ws.onmessage = ev => {
+    const m = JSON.parse(ev.data);
+    if (m.tipo === 'info') atualizarInfo(m);
+    if (m.tipo === 'presente') presente(m);
+  };
+  ws.onclose = () => setTimeout(conectar, 2000);
+}
+conectar();
+</script>
+</body>
+</html>
