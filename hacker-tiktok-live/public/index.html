@@ -86,6 +86,20 @@
   .resultado .cidade { font:normal calc(7 * var(--u)) Impact, sans-serif; color:#fff; }
   .resultado small { display:block; font-size:calc(2.2 * var(--u)); color:#9ca3af; margin-top:calc(.6 * var(--u)); }
 
+  /* scanner da casa: desenho 3D (não é foto de casa real) */
+  .scan { position:absolute; left:calc(7 * var(--u)); right:calc(7 * var(--u)); top:calc(44 * var(--u)); height:calc(68 * var(--u));
+    background:rgba(0,8,4,.92); border:calc(.4 * var(--u)) solid var(--verde); border-radius:calc(2 * var(--u)); overflow:hidden;
+    display:none; box-shadow:0 0 calc(5 * var(--u)) rgba(57,255,106,.35); }
+  .escaneando .scan { display:block; animation:entra .35s; }
+  .escaneando .mira, .escaneando .alvo-ponto { opacity:0 !important; }
+  .scan canvas { position:absolute; inset:0; width:100% !important; height:100% !important; }
+  .scan .cab, .scan .pe { position:absolute; left:0; right:0; padding:calc(1 * var(--u)) calc(2 * var(--u)); font-size:calc(2.5 * var(--u));
+    color:var(--verde); display:flex; justify-content:space-between; text-shadow:0 0 calc(.5 * var(--u)) var(--verde); }
+  .scan .cab { top:0; border-bottom:1px solid rgba(57,255,106,.3); background:rgba(0,0,0,.5); }
+  .scan .pe { bottom:0; flex-direction:column; align-items:center; gap:calc(.3 * var(--u)); background:rgba(0,0,0,.55); }
+  .scan .status { font-size:calc(3.4 * var(--u)); color:#fff; }
+  .scan.achou-casa .status { color:#ff3b30; font-family:Impact, sans-serif; font-size:calc(4.6 * var(--u)); text-shadow:0 0 calc(1 * var(--u)) #ff3b30; }
+  .scan small { font-size:calc(1.9 * var(--u)); color:#9ca3af; text-shadow:none; }
   .fila { position:absolute; top:calc(40.5 * var(--u)); right:calc(3 * var(--u)); background:rgba(0,0,0,.6);
     border-radius:calc(3 * var(--u)); padding:calc(.6 * var(--u)) calc(2 * var(--u)); font-size:calc(2.6 * var(--u)); color:#ffd166; }
   .fila:empty { display:none; }
@@ -152,11 +166,15 @@
     <path d="M50 2 V22 M50 78 V98 M2 50 H22 M78 50 H98" stroke="#ff3b30" stroke-width="2"/></svg></div>
   <div class="alvo-ponto"></div>
 
+  <div class="scan mono" id="scan">
+    <div class="cab"><span>SCANNER TÉRMICO</span><span id="scanPct">0%</span></div>
+    <div class="pe"><div class="status" id="scanStatus">escaneando estrutura...</div><small>casa ilustrativa (desenho) · é só brincadeira</small></div>
+  </div>
   <div class="resultado" id="resultado">
     <h2>🎯 ALVO LOCALIZADO</h2>
     <div class="quem"><span id="resFoto"></span><div style="min-width:0;text-align:left"><div class="nome" id="resNome"></div><div class="arroba" id="resArroba"></div></div></div>
     <div class="cidade" id="resCidade"></div>
-    <small>localização sorteada · é só brincadeira</small>
+    <small>cidade sorteada · é só brincadeira</small>
   </div>
 
   <div class="baixo">
@@ -168,6 +186,122 @@
   </div>
 </div>
 
+
+<script type="importmap">{ "imports": { "three": "/three/build/three.module.js" } }</script>
+<script type="module">
+// Casinha 3D em linhas verdes para o "scanner". É um DESENHO gerado do @ (cada pessoa tem a sua), nunca uma casa real.
+import * as THREE from 'three';
+const painel = document.getElementById('scan');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.localClippingEnabled = true;
+painel.prepend(renderer.domElement);
+const cena = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, .1, 100);
+camera.position.set(12, 8.5, 15);
+camera.lookAt(0, 2.2, 0);
+const VERDE = 0x39ff6a;
+const corte = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0); // só mostra o que já foi escaneado (abaixo do feixe)
+const grade = new THREE.GridHelper(16, 16, 0x1f7a3a, 0x0f3d1d);
+cena.add(grade);
+const feixe = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), new THREE.MeshBasicMaterial({ color: VERDE, transparent: true, opacity: .12, side: THREE.DoubleSide }));
+feixe.rotation.x = -Math.PI / 2;
+cena.add(feixe);
+let casa = null, pessoa = null, alturaTotal = 4;
+
+function sorteador(texto) {
+  let s = 2166136261;
+  for (const c of texto) s = Math.imul(s ^ c.charCodeAt(0), 16777619);
+  return () => (s = Math.imul(s ^ (s >>> 15), 2246822507) >>> 0, (s % 10000) / 10000);
+}
+function caixa(l, a, p, x, y, z, pai) {
+  const g = new THREE.BoxGeometry(l, a, p);
+  const faces = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: VERDE, transparent: true, opacity: .07, clippingPlanes: [corte], depthWrite: false }));
+  const linhas = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: VERDE, clippingPlanes: [corte] }));
+  faces.position.set(x, y, z); linhas.position.set(x, y, z);
+  pai.add(faces, linhas);
+}
+function telhado(l, p, h, y, pai) {
+  const forma = new THREE.Shape([new THREE.Vector2(-l / 2 - .3, 0), new THREE.Vector2(l / 2 + .3, 0), new THREE.Vector2(0, h)]);
+  const g = new THREE.ExtrudeGeometry(forma, { depth: p + .4, bevelEnabled: false });
+  g.translate(0, y, -p / 2 - .2);
+  pai.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: VERDE, transparent: true, opacity: .1, clippingPlanes: [corte], depthWrite: false })),
+    new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: VERDE, clippingPlanes: [corte] })));
+}
+function retangulo(l, a, x, y, z, pai, rotY = 0) {
+  const pts = [[-l / 2, -a / 2], [l / 2, -a / 2], [l / 2, a / 2], [-l / 2, a / 2], [-l / 2, -a / 2]].map(([u, v]) => new THREE.Vector3(u, v, 0));
+  const r = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xb6ffc8, clippingPlanes: [corte] }));
+  r.position.set(x, y, z); r.rotation.y = rotY;
+  pai.add(r);
+}
+function brilho(cor) {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, cor); gr.addColorStop(1, 'rgba(255,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), blending: THREE.AdditiveBlending, depthWrite: false }));
+}
+
+function montar(semente) {
+  if (casa) cena.remove(casa);
+  const r = sorteador(semente);
+  casa = new THREE.Group();
+  const l = 4 + r() * 2, p = 3.5 + r() * 1.5, andares = r() < .35 ? 2 : 1, ha = 2.3;
+  for (let i = 0; i < andares; i++) caixa(l, ha, p, 0, ha / 2 + i * ha, 0, casa);
+  const topo = andares * ha;
+  telhado(l, p, 2 + r() * .6, topo, casa);
+  alturaTotal = topo + 2.7;
+  retangulo(.9, 1.7, -l / 4, .85, p / 2 + .01, casa);                  // porta
+  for (let i = 0; i < andares; i++) {                                     // janelas
+    retangulo(1, .8, l / 4, 1.3 + i * ha, p / 2 + .01, casa);
+    if (i > 0) retangulo(1, .8, -l / 4, 1.3 + i * ha, p / 2 + .01, casa);
+    retangulo(1, .8, 0, 1.3 + i * ha, -p / 2 - .01, casa);
+    retangulo(.9, .8, 0, 1.3 + i * ha, 0, casa, Math.PI / 2);
+  }
+  if (r() < .5) caixa(2.4, 2, p * .8, l / 2 + 1.25, 1, 0, casa);         // garagem
+  // "sinal de calor": silhueta de pessoa dentro da casa
+  pessoa = new THREE.Group();
+  const vermelho = new THREE.MeshBasicMaterial({ color: 0xff3b30 });
+  const cabeca = new THREE.Mesh(new THREE.SphereGeometry(.22, 16, 12), vermelho); cabeca.position.y = 1.55;
+  const corpo = new THREE.Mesh(new THREE.CylinderGeometry(.25, .2, .9, 12), vermelho); corpo.position.y = .95;
+  const pernas = new THREE.Mesh(new THREE.CylinderGeometry(.2, .15, .55, 12), vermelho); pernas.position.y = .28;
+  const aura = brilho('rgba(255,60,40,.9)'); aura.scale.set(2.6, 2.6, 1); aura.position.y = 1;
+  pessoa.add(cabeca, corpo, pernas, aura);
+  pessoa.position.set((r() - .5) * (l - 1.5), andares === 2 && r() < .5 ? ha : 0, (r() - .5) * (p - 1.5));
+  pessoa.visible = false;
+  casa.add(pessoa);
+  cena.add(casa);
+}
+
+let ativo = false, prog = 0;
+window.scanner = {
+  mostrar(semente) { montar(semente); prog = 0; ativo = true; ajustar(); laco(); },
+  progresso(v) { prog = v; },
+  revelar() { pessoa.visible = true; },
+  esconder() { ativo = false; },
+};
+function ajustar() {
+  const w = painel.clientWidth, h = painel.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', ajustar);
+const relogio = new THREE.Clock();
+function laco() {
+  if (!ativo) return;
+  if (renderer.domElement.width !== Math.round(painel.clientWidth * renderer.getPixelRatio())) ajustar();
+  const t = relogio.getElapsedTime();
+  casa.rotation.y = t * .5;
+  const y = prog * alturaTotal;
+  corte.constant = y;
+  feixe.position.y = y;
+  feixe.visible = prog < 1;
+  if (pessoa.visible) { const s = 1 + Math.sin(t * 6) * .08; pessoa.scale.set(s, s, s); }
+  renderer.render(cena, camera);
+  requestAnimationFrame(laco);
+}
+</script>
 <script src="/leaflet/leaflet.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -262,6 +396,8 @@ async function rastrear(m) {
   await digitar(`> região: ${c.uf}`);
   await digitar(`> cidade: ${c.nome.toUpperCase()}`, 'forte');
   await esperar(600);
+  await digitar('> escaneando estrutura...');
+  await escanearCasa(m);
   await digitar('> ALVO LOCALIZADO ✔', 'alerta');
 
   $('resFoto').innerHTML = m.foto ? `<img src="${esc(m.foto)}">` : '<span class="sem"></span>';
@@ -276,6 +412,30 @@ async function rastrear(m) {
   linha('> sessão encerrada.');
   mapa.flyTo(BRASIL, ZOOM_BRASIL, { duration: 2.5 });
   await esperar(2600);
+}
+
+// Scanner: mostra a casinha 3D (desenho, gerado do @ da pessoa), escaneia e acha o "calor" dentro
+async function escanearCasa(m) {
+  const sc = window.scanner, painel = $('scan');
+  if (!sc) return;
+  painel.classList.remove('achou-casa');
+  $('scanStatus').textContent = 'escaneando estrutura...';
+  document.body.classList.add('escaneando'); // primeiro mostra o painel, para a casa ter tamanho
+  sc.mostrar(m.arroba || m.nome);
+  for (let i = 0; i <= 100; i += 4) {
+    sc.progresso(i / 100);
+    $('scanPct').textContent = i + '%';
+    if (i === 48) $('scanStatus').textContent = 'procurando sinal de calor...';
+    if (i % 12 === 0) tom(300 + i * 6, .06, 'sawtooth', .05);
+    await esperar(110);
+  }
+  sc.revelar();
+  painel.classList.add('achou-casa');
+  $('scanStatus').textContent = '🏠 ALVO DENTRO DE CASA ✔';
+  tom(700, .15, 'square', .12); setTimeout(() => tom(1050, .3, 'square', .12), 160);
+  await esperar(2800);
+  document.body.classList.remove('escaneando');
+  sc.esconder();
 }
 
 async function rodarFila() {

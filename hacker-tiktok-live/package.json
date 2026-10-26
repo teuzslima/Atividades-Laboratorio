@@ -4,9 +4,12 @@
   "private": true,
   "description": "Rastreador de brincadeira: quem manda rosa é 'localizado' numa cidade sorteada no mapa",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
     "leaflet": "1.9.4",
+    "three": "0.160.0",
     "tiktok-live-connector": "2.4.4",
     "ws": "8.18.0"
   }

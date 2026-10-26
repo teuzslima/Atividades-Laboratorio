@@ -81,6 +81,11 @@ const server = http.createServer((req, res) => {
     enviar(info());
     return res.end('alvos zerados');
   }
+  // Casa 3D do scanner (three.js) também vem do node_modules
+  if (url.pathname.startsWith('/three/')) {
+    const base = path.join(__dirname, 'node_modules', 'three');
+    return servirArquivo(res, path.join(base, decodeURIComponent(url.pathname.slice(7))), base);
+  }
   // Biblioteca do mapa (Leaflet) vem do node_modules
   if (url.pathname.startsWith('/leaflet/')) {
     const base = path.join(__dirname, 'node_modules', 'leaflet', 'dist');

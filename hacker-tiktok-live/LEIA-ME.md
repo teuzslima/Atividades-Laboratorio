@@ -2,6 +2,10 @@
 
 Quem manda **🌹 rosa** é "localizado": o terminal hacker digita, o mapa de satélite dá zoom do Brasil até
 uma **cidade sorteada**, a mira trava e aparece **"🎯 ALVO LOCALIZADO — @fulano — 📍 Cidade - UF"**.
+Depois do zoom, abre o **scanner térmico**: uma casinha 3D em linhas verdes (desenho, cada @ tem a sua)
+é escaneada de baixo para cima e aparece a silhueta vermelha de "calor" com **"🏠 ALVO DENTRO DE CASA ✔"**.
+Nunca é foto de casa real — de propósito, para não expor a casa de ninguém.
+
 No canto, uma "webcam" mostra um cara de capuz com máscara estilo V de Vingança digitando.
 
 > É tudo **sorteado**. Não existe localização real. A tela mostra "localização sorteada · é só brincadeira":
@@ -21,7 +25,7 @@ Usa a porta **3002**, então dá para ter os 3 jogos instalados (urna 3000, aura
 
 - **Jeito fácil:** abra `http://localhost:3002` no navegador e aperte a tecla **T** (cada T = uma rosa de uma pessoa diferente).
 
-- Simular rosa: `http://localhost:3002/teste?nome=Maria&arroba=maria123`
+- Simular rosa pelo link: `http://localhost:3002/teste?nome=Maria&arroba=maria123`
 - Zerar os alvos: `http://localhost:3002/zerar`
 
 ## Webcam com você de máscara (fica muito melhor)
