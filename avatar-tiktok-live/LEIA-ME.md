@@ -26,6 +26,8 @@ nome e @, um **"?"** de suspense e sai a **nota de AURA** (0.0 a 10.0):
 
 ## Testar sem live
 
+- **Jeito fácil:** abra `http://localhost:3001` no navegador e aperte **T** (rosa) ou **P** (outro presente).
+
 - Simular rosa: `http://localhost:3001/teste?nome=Maria&arroba=maria123&qtd=3`
 - Simular outro presente (sem localizador): `http://localhost:3001/teste?nome=Maria&rosa=0`
 - Testar outra dança: `http://localhost:3001/teste?nome=Maria&danca=giro` (danças: `jamal`, `giro`, `pulo`, `aura`)

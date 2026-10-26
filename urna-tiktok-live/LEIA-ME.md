@@ -87,6 +87,8 @@ Também dá para baixar direto no LIVE Studio/OBS, no controle de volume da font
 
 ## Testar antes de entrar ao vivo
 
+**Jeito fácil:** abra `http://localhost:3000/?fundo=1` e aperte **1** (vota 13) ou **2** (vota 22).
+
 Com a urna ligada, abra no navegador:
 
 - Ver a tela com fundo: `http://localhost:3000/?fundo=1`

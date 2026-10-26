@@ -19,6 +19,8 @@ Usa a porta **3002**, então dá para ter os 3 jogos instalados (urna 3000, aura
 
 ## Testar sem live
 
+- **Jeito fácil:** abra `http://localhost:3002` no navegador e aperte a tecla **T** (cada T = uma rosa de uma pessoa diferente).
+
 - Simular rosa: `http://localhost:3002/teste?nome=Maria&arroba=maria123`
 - Zerar os alvos: `http://localhost:3002/zerar`
 

@@ -535,6 +535,15 @@ function conectar() {
   ws.onclose = () => setTimeout(conectar, 2000);
 }
 conectar();
+
+// Teste rápido: com esta tela aberta no navegador, aperte T para simular uma rosa (P = outro presente).
+const NOMES_TESTE = ['Maria', 'João', 'Ana Clara', 'Pedro', 'Lucas', 'Júlia', 'Carlos', 'Bia'];
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (k !== 't' && k !== 'p') return;
+  const nome = NOMES_TESTE[Math.floor(Math.random() * NOMES_TESTE.length)] + ' ' + Math.floor(Math.random() * 100);
+  fetch(`/teste?nome=${encodeURIComponent(nome)}&arroba=${encodeURIComponent(nome.toLowerCase().replace(/\W+/g, ''))}&rosa=${k === 't' ? 1 : 0}`);
+});
 </script>
 </body>
 </html>
