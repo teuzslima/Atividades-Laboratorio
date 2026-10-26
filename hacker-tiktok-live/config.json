@@ -7,5 +7,8 @@
   "volume": 30,
   "qualquerPresenteLocaliza": false,
   "presentesQueLocalizam": [5655],
-  "segundosNaTela": 6
+  "segundosNaTela": 6,
+  "chaveGoogleMaps": "",
+  "segundos360": 9,
+  "mostrarScanner": false
 }

@@ -39,7 +39,8 @@ const salvar = () => fs.writeFileSync(ARQUIVO, JSON.stringify(alvos));
 function sortearCidade() {
   const c = CIDADES[Math.floor(Math.random() * CIDADES.length)];
   const desvio = () => (Math.random() - .5) * .04; // ~2 km
-  return { ...c, lat: c.lat + desvio(), lon: c.lon + desvio() };
+  // latCentro/lonCentro: centro da cidade, usado no 360 (praça/comércio, nunca um endereço de alguém)
+  return { ...c, latCentro: c.lat, lonCentro: c.lon, lat: c.lat + desvio(), lon: c.lon + desvio() };
 }
 
 const IDS_ROSA = (config.presentesQueLocalizam || [5655]).map(String);
@@ -49,7 +50,8 @@ const localiza = (giftId, nome) => config.qualquerPresenteLocaliza
 function info() {
   const lista = Object.values(alvos).sort((a, b) => b.quando - a.quando).slice(0, 3);
   return { tipo: 'info', marca: config.marca || '', contato: config.contato || '', volume: config.volume ?? 30,
-    segundosNaTela: config.segundosNaTela ?? 6, ultimos: lista };
+    segundosNaTela: config.segundosNaTela ?? 6, ultimos: lista,
+    chaveGoogleMaps: config.chaveGoogleMaps || '', segundos360: config.segundos360 ?? 9, mostrarScanner: !!config.mostrarScanner };
 }
 
 // ---------- servidor da tela ----------

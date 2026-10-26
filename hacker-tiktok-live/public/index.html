@@ -100,6 +100,26 @@
   .scan .status { font-size:calc(3.4 * var(--u)); color:#fff; }
   .scan.achou-casa .status { color:#ff3b30; font-family:Impact, sans-serif; font-size:calc(4.6 * var(--u)); text-shadow:0 0 calc(1 * var(--u)) #ff3b30; }
   .scan small { font-size:calc(1.9 * var(--u)); color:#9ca3af; text-shadow:none; }
+  /* 2.0: visão 360 do Google Street View no centro da cidade sorteada */
+  .v360 { position:absolute; left:0; right:0; top:calc(42 * var(--u)); height:calc(80 * var(--u)); display:none;
+    border-top:calc(.4 * var(--u)) solid var(--verde); border-bottom:calc(.4 * var(--u)) solid var(--verde); background:#000; }
+  .no360 .v360 { display:block; animation:entra .35s; }
+  .no360 .mira, .no360 .alvo-ponto { opacity:0 !important; }
+  #pano { position:absolute; inset:0; }
+  .v360 .vidro { position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.7));
+    box-shadow:inset 0 0 calc(6 * var(--u)) rgba(57,255,106,.35); }
+  .v360 .hud360 { position:absolute; left:0; right:0; padding:calc(1 * var(--u)) calc(2 * var(--u)); font-size:calc(2.5 * var(--u));
+    color:var(--verde); display:flex; justify-content:space-between; text-shadow:0 0 calc(.5 * var(--u)) #000, 0 0 calc(.5 * var(--u)) var(--verde);
+    background:rgba(0,0,0,.55); pointer-events:none; }
+  .v360 .hud360.cima { top:0; }
+  .v360 .hud360.baixo { bottom:0; flex-direction:column; align-items:center; gap:calc(.3 * var(--u)); }
+  .v360 .local360 { font:normal calc(4.4 * var(--u)) Impact, sans-serif; color:#fff; letter-spacing:calc(.2 * var(--u)); }
+  .v360 small { font-size:calc(1.9 * var(--u)); color:#9ca3af; text-shadow:none; }
+  .v360 .bussola { position:absolute; top:50%; left:50%; width:calc(10 * var(--u)); height:calc(10 * var(--u));
+    transform:translate(-50%,-50%); border:calc(.3 * var(--u)) solid rgba(57,255,106,.7); border-radius:50%; pointer-events:none; }
+  .v360 .bussola::after { content:''; position:absolute; left:50%; top:50%; width:calc(1 * var(--u)); height:calc(1 * var(--u));
+    background:#ff3b30; border-radius:50%; transform:translate(-50%,-50%); }
   .fila { position:absolute; top:calc(40.5 * var(--u)); right:calc(3 * var(--u)); background:rgba(0,0,0,.6);
     border-radius:calc(3 * var(--u)); padding:calc(.6 * var(--u)) calc(2 * var(--u)); font-size:calc(2.6 * var(--u)); color:#ffd166; }
   .fila:empty { display:none; }
@@ -169,6 +189,13 @@
   <div class="scan mono" id="scan">
     <div class="cab"><span>SCANNER TÉRMICO</span><span id="scanPct">0%</span></div>
     <div class="pe"><div class="status" id="scanStatus">escaneando estrutura...</div><small>casa ilustrativa (desenho) · é só brincadeira</small></div>
+  </div>
+  <div class="v360 mono" id="v360">
+    <div id="pano"></div>
+    <div class="vidro"></div>
+    <div class="bussola"></div>
+    <div class="hud360 cima"><span><span class="ponto"></span> CÂMERA 360 · AO VIVO</span><span id="rumo">N 0°</span></div>
+    <div class="hud360 baixo"><div class="local360" id="local360"></div><small>imagem pública do Google Street View · ponto aleatório no centro da cidade · brincadeira</small></div>
   </div>
   <div class="resultado" id="resultado">
     <h2>🎯 ALVO LOCALIZADO</h2>
@@ -396,8 +423,8 @@ async function rastrear(m) {
   await digitar(`> região: ${c.uf}`);
   await digitar(`> cidade: ${c.nome.toUpperCase()}`, 'forte');
   await esperar(600);
-  await digitar('> escaneando estrutura...');
-  await escanearCasa(m);
+  await digitar('> buscando câmeras na área...');
+  if (!(await visao360(m)) && usarScanner) await escanearCasa(m);
   await digitar('> ALVO LOCALIZADO ✔', 'alerta');
 
   $('resFoto').innerHTML = m.foto ? `<img src="${esc(m.foto)}">` : '<span class="sem"></span>';
@@ -415,6 +442,52 @@ async function rastrear(m) {
 }
 
 // Scanner: mostra a casinha 3D (desenho, gerado do @ da pessoa), escaneia e acha o "calor" dentro
+// ---------- 2.0: visão 360 (Google Street View) no CENTRO da cidade sorteada ----------
+// Precisa de "chaveGoogleMaps" no config.json. Sem chave (ou sem imagem 360 perto), pula esta parte.
+let googlePronto = null, seg360 = 9, usarScanner = false;
+function carregarGoogle(chave) {
+  if (googlePronto || !chave) return;
+  googlePronto = new Promise(ok => {
+    window.__googlePronto = () => ok(true);
+    window.gm_authFailure = () => { linha('> ERRO: chave do Google Maps recusada', 'alerta'); ok(false); };
+    const sc = document.createElement('script');
+    sc.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(chave)}&callback=__googlePronto&v=weekly`;
+    sc.onerror = () => ok(false);
+    document.head.appendChild(sc);
+  });
+}
+const RUMOS = ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO'];
+async function visao360(m) {
+  if (!googlePronto || !(await googlePronto) || !window.google?.maps) return false;
+  const c = m.cidade, centro = { lat: c.latCentro ?? c.lat, lng: c.lonCentro ?? c.lon };
+  await digitar('> acessando câmera 360...');
+  let achado;
+  try {
+    achado = await new google.maps.StreetViewService().getPanorama({ location: centro, radius: 1000,
+      source: google.maps.StreetViewSource.OUTDOOR, preference: google.maps.StreetViewPreference.BEST });
+  } catch { await digitar('> câmera 360 indisponível nesta área'); return false; }
+  $('local360').textContent = `📡 CENTRO DE ${c.nome.toUpperCase()} - ${c.uf}`;
+  document.body.classList.add('no360');
+  const pano = new google.maps.StreetViewPanorama($('pano'), {
+    pano: achado.data.location.pano, pov: { heading: Math.random() * 360, pitch: 2 }, zoom: 0,
+    disableDefaultUI: true, clickToGo: false, linksControl: false, showRoadLabels: false, motionTracking: false,
+    scrollwheel: false, disableDoubleClickZoom: true, keyboardShortcuts: false,
+  });
+  await digitar('> câmera 360 conectada ✔', 'forte');
+  // gira a câmera devagar (efeito "varrendo a área")
+  const inicio = performance.now(), h0 = pano.getPov().heading;
+  while (performance.now() - inicio < seg360 * 1000) {
+    const t = (performance.now() - inicio) / 1000, h = (h0 + t * 40) % 360;
+    pano.setPov({ heading: h, pitch: 2 + Math.sin(t * .8) * 3 });
+    $('rumo').textContent = `${RUMOS[Math.round(h / 45) % 8]} ${Math.round(h)}°`;
+    if (Math.floor(t * 4) % 6 === 0) tom(900, .03, 'square', .03);
+    await esperar(33);
+  }
+  document.body.classList.remove('no360');
+  pano.setVisible(false);
+  return true;
+}
+
 async function escanearCasa(m) {
   const sc = window.scanner, painel = $('scan');
   if (!sc) return;
@@ -454,6 +527,8 @@ rodarFila();
 // ---------- informações ----------
 function atualizarInfo(p) {
   segNaTela = p.segundosNaTela;
+  seg360 = p.segundos360; usarScanner = p.mostrarScanner;
+  carregarGoogle(p.chaveGoogleMaps);
   volume = Number(new URLSearchParams(location.search).get('volume') ?? p.volume ?? 30);
   $('marca').textContent = p.marca || '';
   $('rodape').innerHTML = p.contato ? `🎮 Jogo interativo pra sua live? <b>WhatsApp ${esc(p.contato)}</b>` : '';
