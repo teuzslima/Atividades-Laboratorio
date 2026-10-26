@@ -8,12 +8,15 @@ const { TikTokLiveConnection, WebcastEvent } = require('tiktok-live-connector');
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
 const DANCAS = ['jamal', 'giro', 'pulo', 'aura'];
 
-// Ranking da live (quem mais mandou presente), salvo em arquivo.
+// Aura de cada pessoa na live, salva em arquivo. O primeiro presente sorteia a aura;
+// cada presente a mais aumenta (assim compensa mandar mais).
+const AURA_POR_PRESENTE = config.auraPorPresente ?? 0.3;
 const ARQUIVO_RANKING = path.join(__dirname, 'ranking.json');
 let ranking = {};
 try { ranking = JSON.parse(fs.readFileSync(ARQUIVO_RANKING, 'utf8')); } catch {}
 const salvar = () => fs.writeFileSync(ARQUIVO_RANKING, JSON.stringify(ranking));
-const top = () => Object.values(ranking).sort((a, b) => b.qtd - a.qtd).slice(0, 3);
+const top = () => Object.values(ranking).sort((a, b) => b.aura - a.aura).slice(0, 3);
+const arred = n => Math.round(n * 10) / 10;
 
 function info() {
   return {
@@ -23,6 +26,7 @@ function info() {
     volume: config.volume ?? 30,
     segundosPorPresente: config.segundosPorPresente ?? 4,
     maxSegundos: config.maxSegundos ?? 60,
+    auraPorPresente: AURA_POR_PRESENTE,
     top: top(),
   };
 }
@@ -54,8 +58,8 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/teste') {
     const nome = url.searchParams.get('nome') || 'Teste';
     const danca = url.searchParams.get('danca');
-    receberPresente(nome, 'teste:' + nome, Number(url.searchParams.get('qtd') || 1), '',
-      DANCAS.includes(danca) ? danca : qualDanca(url.searchParams.get('id')), 'Rosa');
+    receberPresente(nome, url.searchParams.get('arroba') || nome.toLowerCase().replace(/\s+/g, ''), 'teste:' + nome,
+      Number(url.searchParams.get('qtd') || 1), '', DANCAS.includes(danca) ? danca : qualDanca(url.searchParams.get('id')), 'Rosa');
     return res.end('ok');
   }
   if (url.pathname === '/zerar') {
@@ -77,15 +81,20 @@ const wss = new WebSocketServer({ server });
 const enviar = msg => wss.clients.forEach(c => c.readyState === 1 && c.send(JSON.stringify(msg)));
 wss.on('connection', ws => ws.send(JSON.stringify(info())));
 
-function receberPresente(nome, usuario, qtd, foto, danca, presente) {
+function receberPresente(nome, arroba, usuario, qtd, foto, danca, presente) {
   if (qtd <= 0) return;
-  const r = ranking[usuario] || (ranking[usuario] = { nome, qtd: 0, foto });
+  const novo = !ranking[usuario];
+  const r = ranking[usuario] || (ranking[usuario] = { nome, qtd: 0, foto, aura: arred(Math.random() * 6) });
+  const auraAntes = r.aura;
+  if (!novo) r.aura = Math.min(10, arred(r.aura + AURA_POR_PRESENTE * qtd));
+  else if (qtd > 1) r.aura = Math.min(10, arred(r.aura + AURA_POR_PRESENTE * (qtd - 1)));
   r.qtd += qtd;
   r.nome = nome;
   if (foto) r.foto = foto;
   salvar();
-  console.log(`💃 ${nome} mandou ${presente || 'presente'} x${qtd} → dança "${danca}"`);
-  enviar({ tipo: 'presente', nome, qtd, foto, danca, presente });
+  console.log(`✨ ${nome} mandou ${presente || 'presente'} x${qtd} → aura ${r.aura}`);
+  enviar({ tipo: 'presente', id: usuario, nome, arroba, qtd, foto, danca, presente, novo,
+    aura: r.aura, auraAntes: novo ? null : auraAntes });
   enviar(info());
 }
 
@@ -134,7 +143,8 @@ function conectar() {
     const chave = `${usuarioId}:${data.giftId}:${data.groupId}`;
     const qtd = (data.repeatCount || 1) - (combos.get(chave) || 0);
     if (data.repeatEnd || (giftType !== undefined && giftType !== 1)) combos.delete(chave); else combos.set(chave, data.repeatCount || 1);
-    receberPresente(user.nickname || user.displayId || user.uniqueId, usuarioId, qtd, foto, danca, giftName);
+    receberPresente(user.nickname || user.displayId || user.uniqueId, user.displayId || user.uniqueId || '',
+      usuarioId, qtd, foto, danca, giftName);
   });
 
   live.on('disconnected', () => {

@@ -1,10 +1,13 @@
-# Avatar Dançante da Live (TEUZS GAMES)
+# Medidor de Aura (TEUZS GAMES)
 
-Um boneco 3D estilo bloco dança no palco toda vez que alguém manda presente na sua live.
-O nome de quem mandou aparece grande em cima, com confete, e o ranking mostra quem mais fez o boneco dançar.
+Quem manda presente ganha um boneco 3D estilo bloco (cada @ tem o seu visual), aparece no palco com
+nome e @, um **"?"** de suspense e sai a **nota de AURA** (0.0 a 10.0):
 
-- **Qualquer presente = Passinho do Jamal**
-- Cada presente dá **4 segundos** de dança. Combo soma tempo (máximo 60s).
+- Nota abaixo de 5: **"- AURA"** em vermelho · 5 ou mais: **"AURA"** em azul · 9.5+: **"AURA INFINITA"** dourado
+- O primeiro presente sorteia a aura. **Cada presente a mais soma +0.3** — quem quer subir no ranking manda mais.
+- Depois da nota, o boneco dança o **Passinho do Jamal** (4s por presente, máximo 60s).
+- Quem já jogou fica na **multidão** do fundo. Com gente na fila, cada vez dura no máximo 6s de dança.
+- Ranking **🔥 Maiores auras da live** embaixo.
 
 ## Como usar (igual à urna)
 
@@ -19,9 +22,9 @@ O nome de quem mandou aparece grande em cima, com confete, e o ranking mostra qu
 
 ## Testar sem live
 
-- Fazer dançar: `http://localhost:3001/teste?nome=Maria&qtd=3`
+- Simular presente: `http://localhost:3001/teste?nome=Maria&arroba=maria123&qtd=3`
 - Testar outra dança: `http://localhost:3001/teste?nome=Maria&danca=giro` (danças: `jamal`, `giro`, `pulo`, `aura`)
-- Zerar o ranking: `http://localhost:3001/zerar`
+- Zerar o ranking e as auras: `http://localhost:3001/zerar`
 
 ## Configurar (`config.json`)
 
@@ -31,6 +34,7 @@ O nome de quem mandou aparece grande em cima, com confete, e o ranking mostra qu
 | `marca` / `contato` | Nome no canto de cima e WhatsApp no rodapé |
 | `segundosPorPresente` | Quantos segundos cada presente faz dançar |
 | `maxSegundos` | Limite de tempo acumulado |
+| `auraPorPresente` | Quanto cada presente a mais aumenta a aura (padrão 0.3) |
 | `volume` | Volume da batida (0 = sem som). Também dá com `?volume=10` no endereço |
 | `dancas` | Qual dança cada presente faz, pelo id. Ex.: `{"8239": "giro", "padrao": "jamal"}` faz a rosa branca girar e o resto fazer o passinho |
 

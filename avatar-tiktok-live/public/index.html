@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Avatar da Live</title>
+<title>Medidor de Aura</title>
 <style>
   /* 1 unidade = 1% da largura de uma tela em pé (9:16) que cabe na janela */
   :root { --u:min(1vw, 0.5625vh); }
@@ -13,52 +13,60 @@
   .tela { position:relative; width:calc(100 * var(--u)); height:calc(177.78 * var(--u)); margin:0 auto; overflow:hidden; }
   canvas { position:absolute; inset:0; width:100% !important; height:100% !important; display:block; }
 
-  /* nome de quem mandou, em cima do boneco (como no Roblox) */
-  .placa { position:absolute; left:0; right:0; top:calc(22 * var(--u)); text-align:center; pointer-events:none;
-    transition:opacity .3s; }
-  .placa .nome { font-size:calc(8 * var(--u)); color:#ff5a4e; -webkit-text-stroke:calc(.3 * var(--u)) #fff;
-    text-shadow:0 calc(.6 * var(--u)) 0 rgba(0,0,0,.35); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    padding:0 calc(4 * var(--u)); }
-  .placa .sub { font-size:calc(6 * var(--u)); color:#ffe14d; -webkit-text-stroke:calc(.25 * var(--u)) #7a4a00; }
-  .placa.oculta { opacity:0; }
-  .placa.pula { animation:pula .35s; }
-  @keyframes pula { 50% { transform:scale(1.15); } }
+  /* nome e @ de quem está sendo avaliado */
+  .placa { position:absolute; left:0; right:0; top:calc(12 * var(--u)); text-align:center; pointer-events:none;
+    transition:opacity .3s; padding:0 calc(4 * var(--u)); }
+  .placa .nome { font:bold calc(8 * var(--u)) Arial, sans-serif; color:#fff; white-space:nowrap; overflow:hidden;
+    text-overflow:ellipsis; text-shadow:0 calc(.5 * var(--u)) calc(1 * var(--u)) rgba(0,0,0,.4); }
+  .placa .arroba { font:bold calc(5 * var(--u)) Arial, sans-serif; color:#ffe14d; white-space:nowrap; overflow:hidden;
+    text-overflow:ellipsis; text-shadow:0 calc(.3 * var(--u)) 0 #7a5a00; }
+  .vazio-placa .placa { opacity:0; }
+
+  /* nota da aura */
+  .nota { position:absolute; left:0; right:0; top:calc(24 * var(--u)); text-align:center; pointer-events:none; }
+  .nota .num { font-size:calc(16 * var(--u)); line-height:1; color:#ff3b30; -webkit-text-stroke:calc(.6 * var(--u)) #fff;
+    paint-order:stroke fill; text-shadow:0 calc(.8 * var(--u)) 0 rgba(0,0,0,.35); }
+  .nota .rotulo { font-size:calc(9 * var(--u)); line-height:1; margin-top:calc(.5 * var(--u)); letter-spacing:calc(.3 * var(--u));
+    -webkit-text-stroke:calc(.5 * var(--u)) #fff; paint-order:stroke fill; visibility:hidden; }
+  .nota .mais { font-size:calc(6 * var(--u)); color:#3ddc84; -webkit-text-stroke:calc(.3 * var(--u)) #fff; paint-order:stroke fill;
+    height:calc(7 * var(--u)); }
+  .nota.revelada .rotulo { visibility:visible; animation:bate .4s; }
+  .nota.alta .rotulo, .nota.alta .num { color:#1e88ff; }
+  .nota.baixa .rotulo { color:#ff3b30; }
+  .nota.infinita .rotulo, .nota.infinita .num { color:#ffc400; }
+  .nota .num.suspense { animation:treme .15s infinite; color:#fff; -webkit-text-stroke-color:#000; }
+  @keyframes bate { 0% { transform:scale(2); opacity:0 } 100% { transform:scale(1); opacity:1 } }
+  @keyframes treme { 50% { transform:translateX(calc(.6 * var(--u))) rotate(3deg); } }
+  .vazio-placa .nota { display:none; }
+
+  /* tela de espera */
+  .espera { position:absolute; left:0; right:0; top:calc(16 * var(--u)); text-align:center; display:none; }
+  .vazio-placa .espera { display:block; }
+  .espera b { display:block; font-size:calc(9 * var(--u)); color:#fff; -webkit-text-stroke:calc(.4 * var(--u)) #1e88ff;
+    paint-order:stroke fill; animation:respira 1.6s infinite; }
+  .espera span { font:bold calc(4 * var(--u)) Arial, sans-serif; color:#ffe14d; -webkit-text-stroke:calc(.2 * var(--u)) #000; paint-order:stroke fill; }
+  @keyframes respira { 50% { transform:scale(1.06); } }
 
   .marca { position:absolute; top:calc(3 * var(--u)); left:calc(3 * var(--u)); font-size:calc(3.4 * var(--u));
     line-height:1.05; color:#ffd166; text-shadow:0 calc(.4 * var(--u)) 0 #000; }
   .marca small { display:block; font:bold calc(1.7 * var(--u)) Arial, sans-serif; color:#fff; letter-spacing:calc(.2 * var(--u)); }
   .marca:empty { display:none; }
+  .fila { position:absolute; top:calc(3 * var(--u)); right:calc(3 * var(--u)); background:rgba(0,0,0,.5);
+    border-radius:calc(3 * var(--u)); padding:calc(1 * var(--u)) calc(2.5 * var(--u)); font:bold calc(2.8 * var(--u)) Arial, sans-serif; }
+  .fila:empty { display:none; }
 
-  .tempo { position:absolute; top:calc(3 * var(--u)); right:calc(3 * var(--u)); background:rgba(0,0,0,.55);
-    border-radius:calc(3 * var(--u)); padding:calc(1 * var(--u)) calc(2.5 * var(--u)); font-size:calc(3.2 * var(--u));
-    color:#fff; visibility:hidden; }
-  .tempo span { color:#4ade80; }
-  .dancando .tempo { visibility:visible; }
-
-  /* avisos de quem mandou */
-  .avisos { position:absolute; left:calc(3 * var(--u)); bottom:calc(39 * var(--u)); width:70%; display:flex;
-    flex-direction:column-reverse; gap:calc(1.2 * var(--u)); }
-  .aviso { display:flex; align-items:center; gap:calc(2 * var(--u)); background:rgba(0,0,0,.55);
-    border-radius:calc(10 * var(--u)); padding:calc(1 * var(--u)) calc(3 * var(--u)) calc(1 * var(--u)) calc(1 * var(--u));
-    font-family:Arial, sans-serif; animation:entra 4s forwards; }
-  .aviso img, .aviso .sem { width:calc(7 * var(--u)); height:calc(7 * var(--u)); border-radius:50%; object-fit:cover;
-    background:#666; flex:none; }
-  .aviso b { font-size:calc(3.3 * var(--u)); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .aviso span { font-size:calc(2.6 * var(--u)); color:#ddd; }
-  .aviso .x { margin-left:auto; font:italic calc(6 * var(--u)) Impact, sans-serif; text-shadow:0 calc(.4 * var(--u)) 0 #000; }
-  @keyframes entra { 0% { opacity:0; transform:translateX(calc(-10 * var(--u))) } 8%,85% { opacity:1; transform:none } 100% { opacity:0 } }
-
-  /* parte de baixo: como jogar + top + contato */
+  /* parte de baixo: como jogar + ranking + contato */
   .baixo { position:absolute; left:0; right:0; bottom:0; display:flex; flex-direction:column; gap:calc(1.4 * var(--u)); }
-  .caixa { margin:0 calc(3 * var(--u)); background:rgba(17,20,26,.82); border-radius:calc(2.5 * var(--u));
-    padding:calc(1.4 * var(--u)) calc(2.5 * var(--u)); }
+  .caixa { margin:0 calc(3 * var(--u)); background:rgba(17,20,26,.8); border-radius:calc(2.5 * var(--u));
+    padding:calc(1.3 * var(--u)) calc(2.5 * var(--u)); }
   .caixa h3 { font-weight:normal; font-size:calc(3 * var(--u)); color:#ffd166; text-align:center; letter-spacing:calc(.4 * var(--u));
-    margin-bottom:calc(.8 * var(--u)); }
-  .como { display:flex; justify-content:center; gap:calc(4 * var(--u)); font-size:calc(3.1 * var(--u)); white-space:nowrap; }
+    margin-bottom:calc(.6 * var(--u)); }
+  .linha { text-align:center; font:calc(2.6 * var(--u)) Arial, sans-serif; color:#ddd; white-space:nowrap; }
   .top { display:flex; justify-content:space-around; font:calc(2.8 * var(--u)) Arial, sans-serif; gap:calc(2 * var(--u)); }
   .top div { display:flex; align-items:center; gap:calc(1 * var(--u)); min-width:0; }
   .top img, .top .sem { width:calc(4.6 * var(--u)); height:calc(4.6 * var(--u)); border-radius:50%; object-fit:cover; background:#555; flex:none; }
-  .top .nm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:calc(16 * var(--u)); }
+  .top .nm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:calc(15 * var(--u)); }
+  .top b { color:#ffc400; }
   .top .vazio { color:#999; }
   .rodape { background:linear-gradient(90deg,#ffb703,#ffd166,#ffb703); color:#1a1300; text-align:center;
     font-size:calc(3.4 * var(--u)); padding:calc(1.3 * var(--u)) calc(2 * var(--u)); white-space:nowrap; }
@@ -67,20 +75,20 @@
 </style>
 <script type="importmap">{ "imports": { "three": "/three/build/three.module.js" } }</script>
 </head>
-<body>
+<body class="vazio-placa">
 <div class="tela" id="tela">
   <div class="marca" id="marca"></div>
-  <div class="tempo">💃 <span id="tempo">0s</span></div>
-  <div class="placa oculta" id="placa"><div class="nome" id="placaNome"></div><div class="sub" id="placaSub"></div></div>
-  <div class="avisos" id="avisos"></div>
+  <div class="fila" id="fila"></div>
+  <div class="espera"><b>MEDIDOR DE AURA</b><span>Mande um presente e descubra sua aura!</span></div>
+  <div class="placa"><div class="nome" id="nome"></div><div class="arroba" id="arroba"></div></div>
+  <div class="nota" id="nota"><div class="num" id="num">?</div><div class="rotulo" id="rotulo">AURA</div><div class="mais" id="mais"></div></div>
   <div class="baixo">
     <div class="caixa">
-      <h3>MANDE UM PRESENTE E O BONECO DANÇA!</h3>
-      <div class="como"><span>🎁 Qualquer presente = Passinho do Jamal</span></div>
-      <div class="como" style="font-size:calc(2.6 * var(--u)); color:#ccc; margin-top:calc(.6 * var(--u))"><span>🌹 Cada rosa = <span id="seg">4</span> segundos de dança · combo soma tempo</span></div>
+      <h3>🎁 MANDE PRESENTE E DESCUBRA SUA AURA</h3>
+      <div class="linha">Cada presente = <b id="porPresente">+0.3</b> de aura · e seu boneco dança o Passinho do Jamal</div>
     </div>
     <div class="caixa">
-      <h3>🏆 QUEM MAIS FEZ DANÇAR</h3>
+      <h3>🔥 MAIORES AURAS DA LIVE</h3>
       <div class="top" id="top"></div>
     </div>
     <div class="rodape" id="rodape"></div>
@@ -92,9 +100,9 @@ import * as THREE from 'three';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
-const NOMES_DANCA = { jamal: 'PASSINHO DO JAMAL!', giro: 'GIRANDO!', pulo: 'PULA PULA!', aura: '+1000 AURA' };
+const esperar = ms => new Promise(r => setTimeout(r, ms));
 
-// ---------- cena: quarto colorido ----------
+// ---------- cena: céu e chão de neve, como os jogos de aura ----------
 const tela = $('tela');
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -102,257 +110,314 @@ renderer.shadowMap.enabled = true;
 tela.prepend(renderer.domElement);
 
 const cena = new THREE.Scene();
-cena.background = new THREE.Color('#bfe3ff');
-cena.fog = new THREE.Fog('#bfe3ff', 35, 80);
-const camera = new THREE.PerspectiveCamera(42, 9 / 16, 0.1, 100);
-camera.position.set(0, 5.5, 24);
-camera.lookAt(0, 3.6, 0);
+const ceu = document.createElement('canvas');
+ceu.width = 2; ceu.height = 256;
+{
+  const g = ceu.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, '#4fb6ff'); gr.addColorStop(.6, '#bfe6ff'); gr.addColorStop(1, '#eaf7ff');
+  g.fillStyle = gr; g.fillRect(0, 0, 2, 256);
+}
+cena.background = new THREE.CanvasTexture(ceu);
+cena.fog = new THREE.Fog('#dff2ff', 25, 70);
+const camera = new THREE.PerspectiveCamera(40, 9 / 16, 0.1, 150);
+camera.position.set(0, 4.5, 21);
+camera.lookAt(0, 3.4, 0);
 
-cena.add(new THREE.HemisphereLight('#ffffff', '#b8a6ff', 1.6));
-const sol = new THREE.DirectionalLight('#ffffff', 1.6);
-sol.position.set(4, 10, 8);
+cena.add(new THREE.HemisphereLight('#ffffff', '#9fc6e8', 1.8));
+const sol = new THREE.DirectionalLight('#ffffff', 1.5);
+sol.position.set(5, 12, 9);
 sol.castShadow = true;
 sol.shadow.mapSize.set(1024, 1024);
+Object.assign(sol.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15 });
 cena.add(sol);
-
-// chão xadrez em tons pastel
-const cores = ['#ffd6e8', '#c9f2ff', '#fff4c2', '#d9ffd6', '#e6d9ff', '#ffe0cc'];
-for (let x = -6; x < 6; x++) for (let z = -8; z < 6; z++) {
-  const piso = new THREE.Mesh(new THREE.BoxGeometry(2, .2, 2),
-    new THREE.MeshLambertMaterial({ color: cores[(((x * 7 + z * 3) % cores.length) + cores.length) % cores.length] }));
-  piso.position.set(x * 2 + 1, -.1, z * 2 + 1);
-  piso.receiveShadow = true;
-  cena.add(piso);
-}
-// parede do fundo com faixa neon e blocos coloridos
-const parede = new THREE.Mesh(new THREE.BoxGeometry(30, 14, .5), new THREE.MeshLambertMaterial({ color: '#d7ecff' }));
-parede.position.set(0, 7, -15);
-cena.add(parede);
-const neon = new THREE.Mesh(new THREE.BoxGeometry(30, .3, .2), new THREE.MeshBasicMaterial({ color: '#ff3fa4' }));
-neon.position.set(0, 5.2, -14.6);
-cena.add(neon);
-const arcoiris = ['#ff4d4d', '#ff9f1a', '#ffe14d', '#3ddc84', '#29b6f6', '#7c4dff', '#ff4fb4'];
-for (let i = 0; i < 14; i++) {
-  const h = 1 + ((i * 37) % 5) * .35;
-  const bloco = new THREE.Mesh(new THREE.BoxGeometry(1.1, h, .6),
-    new THREE.MeshLambertMaterial({ color: arcoiris[i % arcoiris.length] }));
-  bloco.position.set(-8.5 + i * 1.3, 6.4 + h / 2, -14.4);
-  cena.add(bloco);
-}
-// palco redondo
-const palco = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.2, .35, 48), new THREE.MeshLambertMaterial({ color: '#ffffff' }));
-palco.position.y = .17;
-palco.receiveShadow = true;
-cena.add(palco);
-const anel = new THREE.Mesh(new THREE.TorusGeometry(3.1, .08, 8, 64), new THREE.MeshBasicMaterial({ color: '#ff3fa4' }));
-anel.rotation.x = Math.PI / 2;
-anel.position.y = .36;
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshLambertMaterial({ color: '#f4fbff' }));
+chao.rotation.x = -Math.PI / 2;
+chao.receiveShadow = true;
+cena.add(chao);
+// anel brilhante embaixo de quem está sendo avaliado
+const anel = new THREE.Mesh(new THREE.RingGeometry(1.8, 2.3, 48),
+  new THREE.MeshBasicMaterial({ color: '#1e88ff', transparent: true, opacity: .7 }));
+anel.rotation.x = -Math.PI / 2;
+anel.position.y = .02;
 cena.add(anel);
 
-// ---------- boneco estilo bloco (pivôs nos ombros e quadris) ----------
-function material(cor) { return new THREE.MeshLambertMaterial({ color: cor }); }
-function peca(l, a, p, cor, pai, x, y, z, deslocY) {
-  // Grupo = articulação; a caixa fica pendurada abaixo dela (deslocY)
-  const junta = new THREE.Group();
-  junta.position.set(x, y, z);
-  const m = new THREE.Mesh(new THREE.BoxGeometry(l, a, p), Array.isArray(cor) ? cor : material(cor));
-  m.position.y = deslocY;
-  m.castShadow = true;
-  junta.add(m);
-  pai.add(junta);
-  return junta;
+// ---------- boneco estilo bloco; o visual sai do @ da pessoa (cada um tem o seu) ----------
+const PELES = ['#f5cd30', '#f2c9a0', '#c68642', '#8d5524', '#ffdbac'];
+const CORES = ['#1f2937', '#e11d48', '#2563eb', '#16a34a', '#f59e0b', '#7c3aed', '#ffffff', '#0ea5e9', '#db2777', '#111111'];
+const CABELOS = ['#111111', '#5b3a1a', '#f4d03f', '#e67e22', '#ffffff', '#ff4fb4'];
+function sementeDe(texto) {
+  let h = 2166136261;
+  for (const c of texto) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return h >>> 0;
+}
+function sorteador(semente) {
+  let s = semente || 1;
+  return () => (s = Math.imul(s ^ (s >>> 15), 2246822507) >>> 0, (s % 10000) / 10000);
 }
 
-function rostoTextura() {
+function rostoTextura(pele, sorriso) {
   const c = document.createElement('canvas');
   c.width = c.height = 128;
   const g = c.getContext('2d');
-  g.fillStyle = '#f5cd30'; g.fillRect(0, 0, 128, 128);
+  g.fillStyle = pele; g.fillRect(0, 0, 128, 128);
   g.fillStyle = '#111';
   g.beginPath(); g.ellipse(44, 52, 7, 12, 0, 0, Math.PI * 2); g.fill();
   g.beginPath(); g.ellipse(84, 52, 7, 12, 0, 0, Math.PI * 2); g.fill();
-  g.lineWidth = 7; g.lineCap = 'round';
-  g.beginPath(); g.arc(64, 70, 26, .2 * Math.PI, .8 * Math.PI); g.stroke();
+  g.lineWidth = 7; g.lineCap = 'round'; g.strokeStyle = '#111';
+  g.beginPath();
+  if (sorriso) g.arc(64, 70, 26, .2 * Math.PI, .8 * Math.PI); else { g.moveTo(46, 90); g.lineTo(82, 86); }
+  g.stroke();
   return new THREE.CanvasTexture(c);
 }
 
-const boneco = new THREE.Group();
-cena.add(boneco);
-const corpo = new THREE.Group(); // tudo acima do quadril, para quicar/girar
-corpo.position.y = 2;
-boneco.add(corpo);
-const PELE = '#f5cd30', CAMISA = '#1f2937', CALCA = '#111827';
-const tronco = peca(2, 2, 1, CAMISA, corpo, 0, 0, 0, 1);
-// gravata e detalhes da camisa
-const gravata = new THREE.Mesh(new THREE.BoxGeometry(.3, 1.3, .05), material('#e11d48'));
-gravata.position.set(0, 1.25, .53);
-tronco.add(gravata);
-const cabeca = new THREE.Group();
-cabeca.position.set(0, 2, 0);
-corpo.add(cabeca);
-const rosto = material(PELE);
-const cab = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2),
-  [rosto, rosto, rosto, rosto, new THREE.MeshLambertMaterial({ map: rostoTextura() }), rosto]);
-cab.position.y = .65;
-cab.castShadow = true;
-cabeca.add(cab);
-// chapéu
-const aba = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, .12, 24), material('#0b0b0b'));
-aba.position.y = 1.3;
-cabeca.add(aba);
-const copa = new THREE.Mesh(new THREE.CylinderGeometry(.62, .7, .7, 24), material('#0b0b0b'));
-copa.position.y = 1.68;
-cabeca.add(copa);
-const fita = new THREE.Mesh(new THREE.CylinderGeometry(.71, .71, .15, 24), material('#e11d48'));
-fita.position.y = 1.43;
-cabeca.add(fita);
+function criarBoneco(arroba) {
+  const r = sorteador(sementeDe(arroba || 'x'));
+  const escolha = lista => lista[Math.floor(r() * lista.length)];
+  const pele = escolha(PELES), camisa = escolha(CORES), calca = escolha(CORES), cabelo = escolha(CABELOS);
+  const mat = cor => new THREE.MeshLambertMaterial({ color: cor });
+  const raiz = new THREE.Group();
+  // Grupo = articulação; a caixa fica pendurada abaixo dela (dy)
+  function peca(l, a, p, m, pai, x, y, z, dy) {
+    const junta = new THREE.Group();
+    junta.position.set(x, y, z);
+    const malha = new THREE.Mesh(new THREE.BoxGeometry(l, a, p), m);
+    malha.position.y = dy;
+    malha.castShadow = true;
+    junta.add(malha);
+    pai.add(junta);
+    return junta;
+  }
+  const corpo = new THREE.Group(); // tudo acima do quadril, para quicar/girar
+  corpo.position.y = 2;
+  raiz.add(corpo);
+  const tronco = peca(2, 2, 1, mat(camisa), corpo, 0, 0, 0, 1);
+  if (r() < .5) { // detalhe na camisa (gravata ou listra)
+    const gravata = r() < .5;
+    const d = new THREE.Mesh(new THREE.BoxGeometry(gravata ? .3 : 2.02, gravata ? 1.3 : .35, .05), mat(escolha(CORES)));
+    d.position.set(0, 1.2, .53);
+    tronco.add(d);
+  }
+  const cabeca = new THREE.Group();
+  cabeca.position.y = 2;
+  corpo.add(cabeca);
+  const mp = mat(pele);
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2),
+    [mp, mp, mp, mp, new THREE.MeshLambertMaterial({ map: rostoTextura(pele, r() < .8) }), mp]);
+  cab.position.y = .65;
+  cab.castShadow = true;
+  cabeca.add(cab);
+  const tipo = Math.floor(r() * 4);
+  if (tipo === 0) { // chapéu
+    const aba = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, .12, 24), mat('#0b0b0b'));
+    aba.position.y = 1.3; cabeca.add(aba);
+    const copa = new THREE.Mesh(new THREE.CylinderGeometry(.62, .7, .7, 24), mat('#0b0b0b'));
+    copa.position.y = 1.68; cabeca.add(copa);
+  } else if (tipo === 1) { // boné
+    const b = new THREE.Mesh(new THREE.BoxGeometry(1.3, .4, 1.3), mat(escolha(CORES)));
+    b.position.y = 1.4; cabeca.add(b);
+    const pala = new THREE.Mesh(new THREE.BoxGeometry(1.2, .1, .7), b.material);
+    pala.position.set(0, 1.25, .9); cabeca.add(pala);
+  } else { // cabelo em blocos (curto ou comprido)
+    const h = new THREE.Mesh(new THREE.BoxGeometry(1.35, tipo === 2 ? .5 : .9, 1.35), mat(cabelo));
+    h.position.set(0, tipo === 2 ? 1.35 : 1.2, -.05); cabeca.add(h);
+    if (tipo === 3) {
+      const t = new THREE.Mesh(new THREE.BoxGeometry(1.36, .9, .3), mat(cabelo));
+      t.position.set(0, .9, -.55); cabeca.add(t);
+    }
+  }
+  const mangas = [mp, mp, mat(camisa), mp, mat(camisa), mat(camisa)];
+  const bracoE = peca(1, 2, 1, mangas, corpo, -1.5, 1.9, 0, -.9);
+  const bracoD = peca(1, 2, 1, mangas, corpo, 1.5, 1.9, 0, -.9);
+  const pernaE = peca(1, 2, 1, mat(calca), raiz, -.5, 2, 0, -1);
+  const pernaD = peca(1, 2, 1, mat(calca), raiz, .5, 2, 0, -1);
+  return { raiz, corpo, cabeca, bracoE, bracoD, pernaE, pernaD, fase: r() * 10 };
+}
 
-const bracoE = peca(1, 2, 1, [material(PELE), material(PELE), material(CAMISA), material(PELE), material(CAMISA), material(CAMISA)], corpo, -1.5, 1.9, 0, -.9);
-const bracoD = peca(1, 2, 1, [material(PELE), material(PELE), material(CAMISA), material(PELE), material(CAMISA), material(CAMISA)], corpo, 1.5, 1.9, 0, -.9);
-const pernaE = peca(1, 2, 1, CALCA, boneco, -.5, 2, 0, -1);
-const pernaD = peca(1, 2, 1, CALCA, boneco, .5, 2, 0, -1);
-boneco.position.y = .35;
-
-// ---------- danças ----------
-// Cada dança recebe o tempo (t, em segundos) e mexe as juntas.
+// ---------- danças (recebem o boneco e o tempo em segundos) ----------
 const BPM = 128, batida = t => t * BPM / 60 * Math.PI; // meia volta por batida
-function zerarPose() {
-  for (const j of [bracoE, bracoD, pernaE, pernaD, cabeca, corpo]) j.rotation.set(0, 0, 0);
-  corpo.position.set(0, 2, 0);
-  boneco.position.set(0, .35, 0);
-  boneco.rotation.set(0, 0, 0);
+function zerarPose(b) {
+  for (const j of [b.bracoE, b.bracoD, b.pernaE, b.pernaD, b.cabeca, b.corpo]) j.rotation.set(0, 0, 0);
+  b.corpo.position.set(0, 2, 0);
+  b.raiz.position.y = 0;
 }
 const DANCAS = {
-  // Passinho do Jamal: passinho de lado, joelho subindo, braços balançando cruzado e cabeça no ritmo
-  jamal(t) {
-    const b = batida(t), s = Math.sin(b), c = Math.cos(b);
-    boneco.position.x = Math.sin(b / 2) * .9;                        // desliza de um lado pro outro
-    boneco.position.y = .35 + Math.abs(s) * .25;                    // quica a cada batida
-    corpo.rotation.y = Math.sin(b / 2) * .45;                       // gingado do tronco
-    corpo.rotation.z = -Math.sin(b / 2) * .12;
-    pernaE.rotation.x = -Math.max(0, s) * 1.1;                      // joelho esquerdo sobe
-    pernaD.rotation.x = -Math.max(0, -s) * 1.1;                     // joelho direito sobe
-    pernaE.rotation.z = -.15 - Math.max(0, s) * .2;
-    pernaD.rotation.z = .15 + Math.max(0, -s) * .2;
-    bracoE.rotation.x = -s * 1.3;                                   // braços cruzando na frente
-    bracoD.rotation.x = s * 1.3;
-    bracoE.rotation.z = -.35 - Math.abs(c) * .5;
-    bracoD.rotation.z = .35 + Math.abs(c) * .5;
+  // Passinho do Jamal: passinho de lado, joelho subindo, braços cruzando e cabeça no ritmo
+  jamal(b, t) {
+    const k = batida(t), s = Math.sin(k), c = Math.cos(k);
+    b.raiz.position.x = Math.sin(k / 2) * .9;
+    b.raiz.position.y = Math.abs(s) * .25;
+    b.corpo.rotation.y = Math.sin(k / 2) * .45;
+    b.corpo.rotation.z = -Math.sin(k / 2) * .12;
+    b.pernaE.rotation.set(-Math.max(0, s) * 1.1, 0, -.15 - Math.max(0, s) * .2);
+    b.pernaD.rotation.set(-Math.max(0, -s) * 1.1, 0, .15 + Math.max(0, -s) * .2);
+    b.bracoE.rotation.set(-s * 1.3, 0, -.35 - Math.abs(c) * .5);
+    b.bracoD.rotation.set(s * 1.3, 0, .35 + Math.abs(c) * .5);
     // a cada 8 batidas: pose do Jamal (mão pra cima apontando)
-    if (Math.floor(b / Math.PI) % 8 === 7) { bracoD.rotation.set(-2.9, 0, .2); bracoE.rotation.set(0, 0, -1.2); }
-    cabeca.rotation.x = Math.sin(b * 2) * .15;
-    cabeca.rotation.y = -corpo.rotation.y * .6;
+    if (Math.floor(k / Math.PI) % 8 === 7) { b.bracoD.rotation.set(-2.9, 0, .2); b.bracoE.rotation.set(0, 0, -1.2); }
+    b.cabeca.rotation.x = Math.sin(k * 2) * .15;
+    b.cabeca.rotation.y = -b.corpo.rotation.y * .6;
   },
-  giro(t) {
-    const b = batida(t);
-    boneco.rotation.y = t * 5;
-    boneco.position.y = .35 + Math.abs(Math.sin(b)) * .3;
-    bracoE.rotation.z = -1.5; bracoD.rotation.z = 1.5;
-    pernaE.rotation.x = Math.sin(b) * .4; pernaD.rotation.x = -Math.sin(b) * .4;
-    cabeca.rotation.z = Math.sin(b) * .2;
+  giro(b, t) {
+    const k = batida(t);
+    b.raiz.rotation.y = t * 5;
+    b.raiz.position.y = Math.abs(Math.sin(k)) * .3;
+    b.bracoE.rotation.z = -1.5; b.bracoD.rotation.z = 1.5;
+    b.pernaE.rotation.x = Math.sin(k) * .4; b.pernaD.rotation.x = -Math.sin(k) * .4;
   },
-  pulo(t) {
-    const b = batida(t), s = Math.abs(Math.sin(b));
-    boneco.position.y = .35 + s * 1.6;
-    bracoE.rotation.z = -.3 - s * 2.6; bracoD.rotation.z = .3 + s * 2.6;
-    pernaE.rotation.z = -s * .5; pernaD.rotation.z = s * .5;
+  pulo(b, t) {
+    const s = Math.abs(Math.sin(batida(t)));
+    b.raiz.position.y = s * 1.6;
+    b.bracoE.rotation.z = -.3 - s * 2.6; b.bracoD.rotation.z = .3 + s * 2.6;
+    b.pernaE.rotation.z = -s * .5; b.pernaD.rotation.z = s * .5;
   },
-  aura(t) {
-    const b = batida(t);
-    boneco.position.y = .35 + 1.2 + Math.sin(t * 2) * .3;
-    boneco.rotation.y = Math.sin(t) * .4;
-    bracoE.rotation.set(0, 0, -.6 - Math.sin(b) * .2); bracoD.rotation.set(0, 0, .6 + Math.sin(b) * .2);
-    cabeca.rotation.x = -.25;
+  aura(b, t) {
+    b.raiz.position.y = 1.2 + Math.sin(t * 2) * .3;
+    b.bracoE.rotation.z = -.6; b.bracoD.rotation.z = .6;
+    b.cabeca.rotation.x = -.25;
   },
 };
-function parado(t) {
-  // respirando de leve
-  corpo.position.y = 2 + Math.sin(t * 2) * .03;
-  bracoE.rotation.z = -.08 - Math.sin(t * 2) * .03;
-  bracoD.rotation.z = .08 + Math.sin(t * 2) * .03;
-  cabeca.rotation.y = Math.sin(t * .7) * .25;
+// pose de "aura": braços cruzados, cabeça erguida (enquanto a nota sai)
+function pose(b, t) {
+  b.bracoE.rotation.set(-1.5, 0, .45); b.bracoD.rotation.set(-1.3, 0, -.45);
+  b.cabeca.rotation.x = -.15 + Math.sin(t * 2) * .03;
+  b.corpo.position.y = 2 + Math.sin(t * 2) * .04;
+}
+function parado(b, t) { // respirando de leve
+  const f = t + b.fase;
+  b.corpo.position.y = 2 + Math.sin(f * 2) * .03;
+  b.bracoE.rotation.z = -.08 - Math.sin(f * 2) * .03;
+  b.bracoD.rotation.z = .08 + Math.sin(f * 2) * .03;
+  b.cabeca.rotation.y = Math.sin(f * .7) * .3;
 }
 
-// ---------- confete ----------
-const confetes = [];
-function soltarConfete(qtd) {
-  for (let i = 0; i < Math.min(80, 15 + qtd * 5); i++) {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(.18, .28),
-      new THREE.MeshBasicMaterial({ color: arcoiris[i % arcoiris.length], side: THREE.DoubleSide }));
-    m.position.set((Math.random() - .5) * 8, 9 + Math.random() * 3, (Math.random() - .5) * 4);
-    m.userData = { v: -1.5 - Math.random() * 2, giro: Math.random() * 6 };
-    cena.add(m);
-    confetes.push(m);
+// ---------- multidão: quem já foi avaliado fica no fundo ----------
+const MAX_MULTIDAO = 12;
+const LUGARES = [[-5, -4], [5, -4], [-8, -7], [8, -7], [-2.5, -8], [2.5, -8], [-11, -10], [11, -10], [-6, -12], [6, -12], [0, -13], [-13, -14]];
+const multidao = [];
+function irParaMultidao(b) {
+  multidao.unshift(b);
+  while (multidao.length > MAX_MULTIDAO) {
+    const sai = multidao.pop();
+    cena.remove(sai.raiz);
+    bonecos.forEach((v, k) => { if (v === sai) bonecos.delete(k); });
   }
+  multidao.forEach((m, i) => {
+    m.alvo = new THREE.Vector3(LUGARES[i][0], 0, LUGARES[i][1]);
+    m.raiz.rotation.y = Math.atan2(-LUGARES[i][0], 20) * .6;
+  });
 }
 
-// ---------- estado do jogo ----------
-let segPorPresente = 4, maxSeg = 60, volume = 30;
-let fimDanca = 0, dancaAtual = 'jamal', inicioDanca = 0;
-
-// Batidinha simples de fundo durante a dança (sem música com direitos autorais)
-let audio, proximaBatida = 0;
-function batidaAudio(agora) {
-  if (volume <= 0 || agora < proximaBatida) return;
-  proximaBatida = agora + 60 / BPM;
+// ---------- som (tudo gerado aqui, sem música com direitos autorais) ----------
+let volume = 30, audio;
+function tom(freq, dur, tipo = 'sine', ganho = .25) {
+  if (volume <= 0) return;
   try {
     audio = audio || new AudioContext();
     const o = audio.createOscillator(), g = audio.createGain();
-    o.frequency.setValueAtTime(140, audio.currentTime);
-    o.frequency.exponentialRampToValueAtTime(40, audio.currentTime + .12);
-    g.gain.setValueAtTime(.6 * volume / 100, audio.currentTime);
-    g.gain.exponentialRampToValueAtTime(.001, audio.currentTime + .15);
+    o.type = tipo; o.frequency.value = freq;
+    g.gain.setValueAtTime(ganho * volume / 100, audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, audio.currentTime + dur);
     o.connect(g).connect(audio.destination);
-    o.start(); o.stop(audio.currentTime + .16);
+    o.start(); o.stop(audio.currentTime + dur);
   } catch {}
 }
+let proximaBatida = 0;
+function batidaDanca(agora) {
+  if (agora < proximaBatida) return;
+  proximaBatida = agora + 60 / BPM;
+  tom(110, .14, 'sine', .7);
+}
+
+// ---------- fila de avaliação: uma pessoa por vez no palco ----------
+let segPorPresente = 4, maxSeg = 60;
+const fila = [];
+let atual = null;
+const bonecos = new Map(); // id da pessoa -> boneco (quem volta usa o mesmo boneco)
 
 function presente(m) {
-  const agora = performance.now() / 1000;
-  if (fimDanca < agora || m.danca !== dancaAtual) { inicioDanca = agora; dancaAtual = m.danca; }
-  fimDanca = Math.min(Math.max(fimDanca, agora) + segPorPresente * m.qtd, agora + maxSeg);
-  $('placaNome').textContent = m.nome;
-  $('placaSub').textContent = `${NOMES_DANCA[m.danca]} x${m.qtd}`;
-  const placa = $('placa');
-  placa.classList.remove('oculta', 'pula'); void placa.offsetWidth; placa.classList.add('pula');
-  soltarConfete(m.qtd);
-  mostrarAviso(m);
-}
-
-const MAX_AVISOS = 2;
-function mostrarAviso(m) {
-  const caixa = $('avisos');
-  let el = [...caixa.children].find(a => a.dataset.nome === m.nome);
-  if (el) {
-    el.dataset.qtd = Number(el.dataset.qtd) + m.qtd;
-    el.querySelector('.x').textContent = 'x' + el.dataset.qtd;
-    clearTimeout(el.timer);
-    el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
-  } else {
-    el = document.createElement('div');
-    el.className = 'aviso';
-    el.dataset.nome = m.nome;
-    el.dataset.qtd = m.qtd;
-    el.innerHTML = (m.foto ? `<img src="${esc(m.foto)}">` : '<div class="sem"></div>')
-      + `<div style="min-width:0"><b>${esc(m.nome)}</b><span>enviou ${esc(m.presente || 'presente')} 🎁</span></div>`
-      + `<div class="x">x${m.qtd}</div>`;
-    while (caixa.children.length >= MAX_AVISOS) caixa.firstElementChild.remove();
+  if (atual && atual.m.id === m.id) { // já está no palco: aura sobe na hora e ganha mais dança
+    const antes = atual.m.aura;
+    atual.m.aura = m.aura;
+    atual.m.qtd += m.qtd;
+    if (atual.revelada) mostrarNota(m.aura, `+${(m.aura - antes).toFixed(1)}`);
+    return;
   }
-  caixa.append(el);
-  el.timer = setTimeout(() => el.remove(), 4000);
+  const naFila = fila.find(f => f.id === m.id);
+  if (naFila) { naFila.aura = m.aura; naFila.qtd += m.qtd; return; }
+  fila.push({ ...m });
+  atualizarFila();
+}
+function atualizarFila() { $('fila').textContent = fila.length ? `⏳ Na fila: ${fila.length}` : ''; }
+
+function mostrarNota(aura, mais = '') {
+  const nota = $('nota');
+  $('num').textContent = aura.toFixed(1);
+  nota.classList.remove('alta', 'baixa', 'infinita');
+  nota.classList.add(aura >= 9.5 ? 'infinita' : aura >= 5 ? 'alta' : 'baixa');
+  $('rotulo').textContent = aura >= 9.5 ? 'AURA INFINITA' : aura >= 5 ? 'AURA' : '- AURA';
+  $('mais').textContent = mais;
+  if (mais) setTimeout(() => { if ($('mais').textContent === mais) $('mais').textContent = ''; }, 1500);
 }
 
+async function rodarFila() {
+  while (true) {
+    if (!fila.length) { document.body.classList.add('vazio-placa'); await esperar(300); continue; }
+    const m = fila.shift();
+    atualizarFila();
+    document.body.classList.remove('vazio-placa');
+    $('nome').textContent = m.nome;
+    $('arroba').textContent = m.arroba ? '@' + m.arroba : '';
+
+    // boneco entra no palco (se já estava na multidão, sai de lá)
+    let b = bonecos.get(m.id);
+    if (b) { const i = multidao.indexOf(b); if (i >= 0) multidao.splice(i, 1); }
+    else { b = criarBoneco(m.arroba || m.nome); bonecos.set(m.id, b); cena.add(b.raiz); }
+    b.raiz.position.set(0, 0, 0); b.raiz.rotation.y = 0; b.alvo = null;
+    atual = { m, boneco: b, revelada: false, estado: 'pose', inicio: performance.now() / 1000 };
+
+    // suspense: "?" tremendo com rufar
+    const nota = $('nota'), num = $('num');
+    nota.classList.remove('revelada', 'alta', 'baixa', 'infinita');
+    $('mais').textContent = '';
+    num.textContent = '?';
+    num.classList.add('suspense');
+    for (let i = 0; i < 10; i++) { tom(300 + i * 25, .08, 'square', .12); await esperar(130); }
+    num.classList.remove('suspense');
+
+    // número sobe até a aura (quem já tinha aura sobe a partir dela)
+    const de = m.auraAntes ?? 0, ate = atual.m.aura;
+    for (let i = 1; i <= 15; i++) { num.textContent = (de + (ate - de) * i / 15).toFixed(1); await esperar(45); }
+    mostrarNota(atual.m.aura, m.auraAntes != null ? `+${(ate - de).toFixed(1)}` : '');
+    nota.classList.add('revelada');
+    atual.revelada = true;
+    if (atual.m.aura >= 5) { tom(880, .15); setTimeout(() => tom(1320, .3), 150); } else tom(220, .4, 'sawtooth', .15);
+    await esperar(1500);
+
+    // dança: tempo pelos presentes (com gente na fila a vez fica curta, para todo mundo jogar)
+    atual.estado = 'danca';
+    atual.inicio = performance.now() / 1000;
+    const tempo = () => Math.min(segPorPresente * Math.max(1, atual.m.qtd), maxSeg, fila.length ? 6 : maxSeg);
+    while (performance.now() / 1000 - atual.inicio < tempo()) await esperar(100);
+
+    irParaMultidao(b);
+    atual = null;
+    nota.classList.remove('revelada');
+  }
+}
+rodarFila();
+
+// ---------- informações (marca, ranking) ----------
 function atualizarInfo(p) {
   segPorPresente = p.segundosPorPresente; maxSeg = p.maxSegundos;
-  $('seg').textContent = segPorPresente;
   volume = Number(new URLSearchParams(location.search).get('volume') ?? p.volume ?? 30);
+  $('porPresente').textContent = '+' + (p.auraPorPresente ?? .3);
   $('marca').innerHTML = p.marca ? `${esc(p.marca)}<small>JOGOS INTERATIVOS</small>` : '';
   $('rodape').innerHTML = p.contato ? `🎮 Jogo interativo pra sua live? <b>WhatsApp ${esc(p.contato)}</b>` : '';
   const medalhas = ['🥇', '🥈', '🥉'];
   $('top').innerHTML = p.top.length
     ? p.top.map((e, i) => `<div>${medalhas[i]}${e.foto ? `<img src="${esc(e.foto)}">` : '<span class="sem"></span>'}`
-        + `<span class="nm">${esc(e.nome)}</span><b>${e.qtd}</b></div>`).join('')
-    : '<span class="vazio">Seja o primeiro a fazer o boneco dançar!</span>';
+        + `<span class="nm">${esc(e.nome)}</span><b>${Number(e.aura).toFixed(1)}</b></div>`).join('')
+    : '<span class="vazio">Ninguém mediu a aura ainda!</span>';
 }
 
 // ---------- loop ----------
@@ -368,23 +433,26 @@ ajustarTamanho();
 const relogio = new THREE.Clock();
 function quadro() {
   const dt = Math.min(relogio.getDelta(), .05), agora = performance.now() / 1000;
-  zerarPose();
-  const dancando = agora < fimDanca;
-  document.body.classList.toggle('dancando', dancando);
-  if (dancando) {
-    DANCAS[dancaAtual](agora - inicioDanca);
-    $('tempo').textContent = Math.ceil(fimDanca - agora) + 's';
-    batidaAudio(agora);
-    anel.material.color.setHSL((agora * .3) % 1, 1, .6);
-  } else {
-    parado(agora);
-    $('placa').classList.add('oculta');
+  for (const m of multidao) {
+    zerarPose(m);
+    if (m.alvo) { m.raiz.position.x += (m.alvo.x - m.raiz.position.x) * Math.min(1, dt * 2.5);
+                  m.raiz.position.z += (m.alvo.z - m.raiz.position.z) * Math.min(1, dt * 2.5); }
+    parado(m, agora);
   }
-  for (let i = confetes.length - 1; i >= 0; i--) {
-    const c = confetes[i];
-    c.position.y += c.userData.v * dt;
-    c.rotation.x += c.userData.giro * dt; c.rotation.y += c.userData.giro * dt;
-    if (c.position.y < 0) { cena.remove(c); c.geometry.dispose(); c.material.dispose(); confetes.splice(i, 1); }
+  anel.visible = !!atual;
+  if (atual) {
+    const b = atual.boneco;
+    zerarPose(b);
+    b.raiz.position.x = 0;
+    if (atual.estado === 'danca') {
+      (DANCAS[atual.m.danca] || DANCAS.jamal)(b, agora - atual.inicio);
+      batidaDanca(agora);
+      anel.material.color.setHSL((agora * .3) % 1, 1, .55);
+    } else {
+      pose(b, agora);
+      anel.material.color.set(atual.revelada ? (atual.m.aura >= 5 ? '#1e88ff' : '#ff3b30') : '#ffffff');
+    }
+    anel.scale.setScalar(1 + Math.sin(agora * 4) * .05);
   }
   renderer.render(cena, camera);
   requestAnimationFrame(quadro);
