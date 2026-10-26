@@ -39,6 +39,27 @@
   @keyframes treme { 50% { transform:translateX(calc(.6 * var(--u))) rotate(3deg); } }
   .vazio-placa .nota { display:none; }
 
+
+  /* localizador (rosa): mapa do Brasil com radar e alfinete na cidade sorteada */
+  .local { position:absolute; left:50%; top:calc(27 * var(--u)); transform:translateX(-50%); width:calc(70 * var(--u));
+    background:rgba(8,20,35,.96); border:calc(.4 * var(--u)) solid #3ddc84; border-radius:calc(3 * var(--u));
+    padding:calc(1.5 * var(--u)) calc(2 * var(--u)); text-align:center; display:none; box-shadow:0 0 calc(4 * var(--u)) rgba(61,220,132,.5); }
+  .localizando .local { display:block; animation:bate .35s; }
+  .localizando .nota { display:none; }
+  .local h4 { font-weight:normal; font-size:calc(3.6 * var(--u)); color:#3ddc84; letter-spacing:calc(.3 * var(--u)); }
+  .local svg { width:calc(46 * var(--u)); height:calc(46 * var(--u)); display:block; margin:calc(.5 * var(--u)) auto; }
+  .local .pais { fill:#14532d; stroke:#3ddc84; stroke-width:.6; }
+  .local .radar { transform-origin:50px 50px; animation:gira 1.2s linear infinite; }
+  .local.achou .radar { display:none; }
+  .local .pino { display:none; }
+  .local.achou .pino { display:block; }
+  .local.achou .queda { animation:cai .4s; } /* animação no grupo de dentro: o de fora guarda a posição */
+  @keyframes gira { to { transform:rotate(360deg); } }
+  @keyframes cai { 0% { transform:translateY(-12px); opacity:0 } 100% { transform:none; opacity:1 } }
+  .local .cidade { font-size:calc(5.5 * var(--u)); color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .local.achou .cidade { color:#ffe14d; }
+  .local small { display:block; font:calc(2.2 * var(--u)) Arial, sans-serif; color:#9ca3af; margin-top:calc(.4 * var(--u)); }
+
   /* tela de espera */
   .espera { position:absolute; left:0; right:0; top:calc(16 * var(--u)); text-align:center; display:none; }
   .vazio-placa .espera { display:block; }
@@ -81,11 +102,23 @@
   <div class="fila" id="fila"></div>
   <div class="espera"><b>MEDIDOR DE AURA</b><span>Mande um presente e descubra sua aura!</span></div>
   <div class="placa"><div class="nome" id="nome"></div><div class="arroba" id="arroba"></div></div>
+  <div class="local" id="local">
+    <h4 id="localTitulo">📍 LOCALIZANDO...</h4>
+    <svg viewBox="0 0 100 100">
+      <path class="pais" d="M0.0 33.0 L3.8 38.0 L8.8 41.8 L11.5 41.5 L18.8 39.0 L21.8 41.5 L24.3 45.6 L30.5 48.1 L34.5 49.1 L33.8 52.2 L39.3 55.2 L39.8 58.2 L41.2 60.0 L41.0 64.6 L40.0 69.6 L45.7 71.1 L48.5 74.7 L48.8 78.7 L50.5 82.0 L46.0 85.1 L41.0 90.4 L45.0 92.2 L51.5 99.2 L54.3 95.4 L59.2 90.4 L63.5 85.8 L63.7 79.7 L65.0 78.0 L70.0 74.7 L74.0 72.2 L80.0 71.9 L82.5 69.1 L84.5 65.3 L87.0 58.7 L87.5 51.9 L87.8 46.8 L91.8 42.3 L96.8 36.7 L98.0 32.2 L97.0 27.6 L92.0 26.1 L87.5 22.5 L81.2 21.3 L74.2 20.3 L68.8 16.5 L63.7 16.2 L61.3 14.4 L59.0 9.4 L56.8 3.3 L53.5 8.4 L48.8 8.1 L45.0 9.1 L40.0 10.1 L36.0 9.1 L35.5 0.8 L31.8 2.5 L25.0 3.8 L23.0 8.4 L18.0 10.9 L11.5 11.1 L11.5 16.5 L10.0 24.6 L3.0 26.8 Z"/>
+      <g class="radar"><path d="M50 50 L50 2 A48 48 0 0 1 84 16 Z" fill="rgba(61,220,132,.35)"/></g>
+      <circle id="ponto" r="1.6" fill="#ffe14d"/>
+      <g class="pino" id="pino"><g class="queda"><circle r="4" fill="none" stroke="#ff3b30" stroke-width="1"><animate attributeName="r" values="2;7;2" dur="1.2s" repeatCount="indefinite"/></circle>
+        <path d="M0 0 C-3 -4 -4 -6 -4 -8 A4 4 0 0 1 4 -8 C4 -6 3 -4 0 0 Z" fill="#ff3b30" stroke="#fff" stroke-width=".6"/></g></g>
+    </svg>
+    <div class="cidade" id="localCidade"></div>
+    <small>localização sorteada · é só brincadeira</small>
+  </div>
   <div class="nota" id="nota"><div class="num" id="num">?</div><div class="rotulo" id="rotulo">AURA</div><div class="mais" id="mais"></div></div>
   <div class="baixo">
     <div class="caixa">
       <h3>🎁 MANDE PRESENTE E DESCUBRA SUA AURA</h3>
-      <div class="linha">Cada presente = <b id="porPresente">+0.3</b> de aura · e seu boneco dança o Passinho do Jamal</div>
+      <div class="linha">🌹 Rosa = te localizo no Brasil · cada presente = <b id="porPresente">+0.3</b> de aura</div>
     </div>
     <div class="caixa">
       <h3>🔥 MAIORES AURAS DA LIVE</h3>
@@ -343,7 +376,7 @@ function presente(m) {
     return;
   }
   const naFila = fila.find(f => f.id === m.id);
-  if (naFila) { naFila.aura = m.aura; naFila.qtd += m.qtd; return; }
+  if (naFila) { naFila.aura = m.aura; naFila.qtd += m.qtd; naFila.cidade = naFila.cidade || m.cidade; return; }
   fila.push({ ...m });
   atualizarFila();
 }
@@ -357,6 +390,36 @@ function mostrarNota(aura, mais = '') {
   $('rotulo').textContent = aura >= 9.5 ? 'AURA INFINITA' : aura >= 5 ? 'AURA' : '- AURA';
   $('mais').textContent = mais;
   if (mais) setTimeout(() => { if ($('mais').textContent === mais) $('mais').textContent = ''; }, 1500);
+}
+
+
+// ---------- localizador da rosa (cidade sorteada pelo servidor) ----------
+const projetar = (lat, lon) => [(lon + 74) / 40 * 100, (5.5 - lat) / 39.5 * 100];
+const CIDADES_ROLETA = ['São Paulo - SP', 'Manaus - AM', 'Recife - PE', 'Porto Alegre - RS', 'Salvador - BA', 'Belém - PA',
+  'Goiânia - GO', 'Fortaleza - CE', 'Curitiba - PR', 'Cuiabá - MT', 'Natal - RN', 'Rio de Janeiro - RJ'];
+const ROLETA_POS = [[-23.5, -46.6], [-3.1, -60], [-8, -34.9], [-30, -51.2], [-13, -38.5], [-1.5, -48.5],
+  [-16.7, -49.3], [-3.7, -38.5], [-25.4, -49.3], [-15.6, -56.1], [-5.8, -35.2], [-22.9, -43.2]];
+async function localizar(m) {
+  const painel = $('local'), ponto = $('ponto');
+  $('localTitulo').textContent = `📍 LOCALIZANDO ${m.arroba ? '@' + m.arroba : m.nome}...`;
+  painel.classList.remove('achou');
+  document.body.classList.add('localizando');
+  for (let i = 0; i < 16; i++) { // roleta de cidades com o radar girando
+    const k = Math.floor(Math.random() * CIDADES_ROLETA.length), [x, y] = projetar(...ROLETA_POS[k]);
+    $('localCidade').textContent = CIDADES_ROLETA[k];
+    ponto.setAttribute('cx', x); ponto.setAttribute('cy', y);
+    tom(600 + (i % 2) * 200, .05, 'square', .08);
+    await esperar(110 + i * 8);
+  }
+  const c = m.cidade, [x, y] = projetar(c.lat, c.lon);
+  ponto.setAttribute('cx', -10);
+  $('pino').setAttribute('transform', `translate(${x} ${y})`);
+  $('localCidade').textContent = `📍 ${c.nome} - ${c.uf}`;
+  $('localTitulo').textContent = `${m.arroba ? '@' + m.arroba : m.nome} ENCONTRADO!`;
+  painel.classList.add('achou');
+  tom(1000, .12); setTimeout(() => tom(1500, .25), 130);
+  await esperar(2600);
+  document.body.classList.remove('localizando');
 }
 
 async function rodarFila() {
@@ -374,6 +437,9 @@ async function rodarFila() {
     else { b = criarBoneco(m.arroba || m.nome); bonecos.set(m.id, b); cena.add(b.raiz); }
     b.raiz.position.set(0, 0, 0); b.raiz.rotation.y = 0; b.alvo = null;
     atual = { m, boneco: b, revelada: false, estado: 'pose', inicio: performance.now() / 1000 };
+
+    // mandou rosa: primeiro o "localizador" mostra a cidade sorteada
+    if (m.cidade) await localizar(m);
 
     // suspense: "?" tremendo com rufar
     const nota = $('nota'), num = $('num');

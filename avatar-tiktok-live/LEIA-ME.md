@@ -5,6 +5,10 @@ nome e @, um **"?"** de suspense e sai a **nota de AURA** (0.0 a 10.0):
 
 - Nota abaixo de 5: **"- AURA"** em vermelho · 5 ou mais: **"AURA"** em azul · 9.5+: **"AURA INFINITA"** dourado
 - O primeiro presente sorteia a aura. **Cada presente a mais soma +0.3** — quem quer subir no ranking manda mais.
+- **🌹 Rosa = localizador:** antes da nota aparece um mapa do Brasil com radar, as cidades rodam como
+  roleta e cai um alfinete numa **cidade sorteada** (ex.: "📍 Campinas - SP"). A mesma pessoa cai sempre na
+  mesma cidade durante a live. Na tela aparece "localização sorteada · é só brincadeira" — **deixe esse aviso**,
+  para ninguém achar que é a localização real e denunciar a live.
 - Depois da nota, o boneco dança o **Passinho do Jamal** (4s por presente, máximo 60s).
 - Quem já jogou fica na **multidão** do fundo. Com gente na fila, cada vez dura no máximo 6s de dança.
 - Ranking **🔥 Maiores auras da live** embaixo.
@@ -22,7 +26,8 @@ nome e @, um **"?"** de suspense e sai a **nota de AURA** (0.0 a 10.0):
 
 ## Testar sem live
 
-- Simular presente: `http://localhost:3001/teste?nome=Maria&arroba=maria123&qtd=3`
+- Simular rosa: `http://localhost:3001/teste?nome=Maria&arroba=maria123&qtd=3`
+- Simular outro presente (sem localizador): `http://localhost:3001/teste?nome=Maria&rosa=0`
 - Testar outra dança: `http://localhost:3001/teste?nome=Maria&danca=giro` (danças: `jamal`, `giro`, `pulo`, `aura`)
 - Zerar o ranking e as auras: `http://localhost:3001/zerar`
 
