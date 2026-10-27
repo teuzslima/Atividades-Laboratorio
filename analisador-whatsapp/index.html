@@ -1,0 +1,938 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analisador de Conversas do WhatsApp</title>
+<style>
+  :root {
+    --bg: #fff7f9; --card: #ffffff; --text: #2b2230; --muted: #7a6b80;
+    --line: #f0dfe6; --accent: #e0457b; --accent2: #7c4dff; --bar-bg: #f6e9ef;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17121a; --card: #221a26; --text: #f3eaf5; --muted: #a898ad;
+      --line: #3a2e40; --accent: #ff6b9d; --accent2: #a78bfa; --bar-bg: #2e2433;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--text); line-height: 1.45; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px 16px 64px; }
+  h1 { font-size: clamp(1.7rem, 4.5vw, 2.6rem); margin: 0 0 8px; }
+  h2 { margin: 0 0 12px; font-size: 1.1rem; }
+  h3 { margin: 16px 0 8px; font-size: .95rem; color: var(--muted); font-weight: 600; }
+  .muted { color: var(--muted); }
+  .small { font-size: .85rem; }
+  .hero { text-align: center; padding: 28px 0 8px; }
+  .hero p { margin: 0 auto; max-width: 620px; }
+
+  .drop { margin: 24px auto; max-width: 640px; border: 2px dashed var(--accent); border-radius: 18px;
+          padding: 36px 16px; text-align: center; background: var(--card); cursor: pointer; transition: .15s; }
+  .drop.over { background: var(--bar-bg); transform: scale(1.01); }
+  .drop .big { font-size: 2.6rem; }
+  .btn { display: inline-block; border: 0; border-radius: 999px; padding: 10px 18px; font: inherit; font-weight: 600;
+         background: var(--accent); color: #fff; cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+  .btn:hover { filter: brightness(1.08); }
+  .how { max-width: 640px; margin: 0 auto; }
+  .how details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin: 8px 0; }
+  .how summary { cursor: pointer; font-weight: 600; }
+  .error { max-width: 640px; margin: 0 auto 16px; background: #fde8e8; color: #9b1c1c; border: 2px solid #e02424;
+           border-radius: 14px; padding: 14px 16px; }
+  .error pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #fff; color: #333; border-radius: 8px;
+               padding: 8px; font-size: .8rem; max-height: 160px; overflow: auto; }
+  .source { text-align: center; margin: -4px 0 14px; }
+
+  section { margin-top: 32px; }
+  .section-title { font-size: 1.45rem; margin: 0 0 14px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+  .grid.tiles { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; min-width: 0; }
+  .tile .num { font-size: 1.8rem; font-weight: 800; line-height: 1.1; }
+  .tile .lbl { color: var(--muted); font-size: .85rem; }
+  .headline { font-size: 1.1rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff;
+              border-radius: 18px; padding: 20px; }
+  .headline b { font-weight: 800; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 4px 0 10px; font-size: .85rem; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+
+  .hb { display: grid; grid-template-columns: minmax(60px, 130px) 1fr auto; gap: 6px 10px; align-items: center; }
+  .hb .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; }
+  .hb .bar { height: 14px; border-radius: 7px; background: var(--bar-bg); overflow: hidden; }
+  .hb .bar span { display: block; height: 100%; border-radius: 7px; }
+  .hb .val { font-variant-numeric: tabular-nums; font-size: .85rem; text-align: right; }
+
+  .cols { display: flex; align-items: flex-end; gap: 2px; height: calc(var(--h) + 22px); }
+  .col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: stretch; }
+  .col .stack { height: var(--h); display: flex; flex-direction: column-reverse; border-radius: 4px 4px 0 0; overflow: hidden; }
+  .col .stack span { display: block; width: 100%; }
+  .col .lbl { height: 22px; font-size: .68rem; color: var(--muted); text-align: center; white-space: nowrap; overflow: visible; padding-top: 4px; }
+  .col:hover .stack { filter: brightness(1.15); }
+
+  .heat { display: grid; grid-template-columns: 34px repeat(24, 1fr); gap: 2px; font-size: .65rem; }
+  .heat div { aspect-ratio: 1; border-radius: 3px; min-width: 0; }
+  .heat .h { aspect-ratio: auto; text-align: center; color: var(--muted); background: none; }
+  .heat .d { aspect-ratio: auto; color: var(--muted); background: none; display: flex; align-items: center; }
+  .heat .c { background: color-mix(in srgb, var(--accent) calc(var(--a) * 100%), var(--bar-bg)); }
+
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { color: var(--muted); font-weight: 600; }
+
+  .award { display: flex; gap: 12px; align-items: center; }
+  .award .emo { font-size: 2.1rem; }
+  .award .t { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .award .w { font-weight: 800; font-size: 1.05rem; }
+
+  .love-big { text-align: center; }
+  .love-big .num { font-size: 3.2rem; font-weight: 900; color: var(--accent); line-height: 1; }
+
+  .cloud { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; justify-content: center; padding: 8px 0; }
+  .cloud span { font-weight: 700; line-height: 1.15; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: var(--bar-bg); border-radius: 999px; padding: 3px 10px; font-size: .85rem; }
+  .chip b { color: var(--accent); }
+  .emoji-list { display: flex; flex-wrap: wrap; gap: 10px; }
+  .emoji-list div { text-align: center; min-width: 44px; }
+  .emoji-list .e { font-size: 1.8rem; }
+  .emoji-list .n { font-size: .75rem; color: var(--muted); }
+
+  .msg { background: var(--bar-bg); border-radius: 12px; padding: 8px 12px; margin: 6px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg .meta { font-size: .75rem; color: var(--muted); display: block; margin-bottom: 2px; }
+  .msg.focus { outline: 2px solid var(--accent); }
+  input[type=search] { width: 100%; font: inherit; padding: 10px 14px; border-radius: 12px; border: 1.5px solid var(--line);
+                       background: var(--bg); color: var(--text); }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 16px; }
+  footer { text-align: center; margin-top: 48px; color: var(--muted); font-size: .85rem; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div id="start">
+    <header class="hero">
+      <h1>💬 Analisador de Conversas do WhatsApp</h1>
+      <p class="muted">Exporte uma conversa do WhatsApp e descubra quem manda mais mensagens, as palavras e emojis
+        favoritos, quantos “te amo” rolaram, quem responde mais rápido e muito mais.</p>
+    </header>
+
+    <label class="drop" id="drop">
+      <div class="big">📂</div>
+      <p><b>Clique para escolher</b> ou arraste aqui o arquivo exportado<br>
+        <span class="muted small">.txt (Android) ou .zip (iPhone)</span></p>
+      <input type="file" id="file" accept=".txt,.zip,text/plain,application/zip" hidden>
+    </label>
+    <div class="error" id="error" role="alert" hidden></div>
+    <p style="text-align:center"><button class="btn ghost" id="demo">✨ Ver com uma conversa de exemplo</button></p>
+
+    <div class="how">
+      <details>
+        <summary>📱 Como exportar no Android</summary>
+        <p>Abra a conversa → toque nos <b>⋮</b> (canto superior) → <b>Mais</b> → <b>Exportar conversa</b> →
+          <b>Sem mídia</b>. Salve ou envie o arquivo <code>.txt</code> para você mesmo e abra aqui.</p>
+      </details>
+      <details>
+        <summary>🍎 Como exportar no iPhone</summary>
+        <p>Abra a conversa → toque no <b>nome do contato</b> → role até <b>Exportar conversa</b> →
+          <b>Sem mídia</b>. Vai gerar um <code>.zip</code> — pode mandar ele direto aqui, não precisa descompactar.</p>
+      </details>
+      <details>
+        <summary>🔒 Minha conversa vai para algum lugar?</summary>
+        <p>Não. Tudo é processado <b>no seu próprio navegador</b>. Nenhuma mensagem é enviada para servidor nenhum —
+          você pode até desligar a internet depois de abrir a página.</p>
+      </details>
+    </div>
+  </div>
+
+  <div id="results" hidden></div>
+
+  <footer>Feito com 💜 · tudo roda localmente no seu navegador</footer>
+</main>
+
+<script>
+"use strict";
+
+/* ============================ utilidades ============================ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = n => Math.round(n).toLocaleString("pt-BR");
+const pct = (a, b) => (b ? (100 * a / b).toFixed(1).replace(".", ",") : "0") + "%";
+const pad = n => String(n).padStart(2, "0");
+const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const monthKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+const keyToDayNum = k => { const [y, m, d] = k.split("-").map(Number); return Date.UTC(y, m - 1, d) / 864e5; };
+const fmtDate = d => d.toLocaleDateString("pt-BR");
+const fmtDateTime = d => d.toLocaleDateString("pt-BR") + " às " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+const norm = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const DIAS_LONGO = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const COLORS = ["#e0457b", "#7c4dff", "#14b8a6", "#f59e0b", "#3b82f6", "#ef4444", "#84cc16"];
+const OTHER_COLOR = "#a3a3a3";
+
+function fmtDur(ms) {
+  if (ms == null || !isFinite(ms)) return "—";
+  const s = Math.round(ms / 1000);
+  if (s < 60) return s + " s";
+  const m = Math.round(s / 60);
+  if (m < 60) return m + " min";
+  const h = Math.floor(m / 60), mm = m % 60;
+  if (h < 48) return h + " h" + (mm ? " " + mm + " min" : "");
+  return Math.round(h / 24) + " dias";
+}
+function median(arr) {
+  if (!arr.length) return null;
+  const a = [...arr].sort((x, y) => x - y), i = a.length >> 1;
+  return a.length % 2 ? a[i] : (a[i - 1] + a[i]) / 2;
+}
+function topN(map, n) { return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n); }
+function inc(map, k, v = 1) { map.set(k, (map.get(k) || 0) + v); }
+
+/* ============================ leitura do arquivo ============================ */
+// Lê um .zip sem bibliotecas externas: acha o .txt da conversa e descompacta com DecompressionStream.
+async function unzipChat(buf) {
+  const dv = new DataView(buf);
+  let eocd = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 65557); i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error("Arquivo ZIP inválido.");
+  const count = dv.getUint16(eocd + 10, true);
+  let off = dv.getUint32(eocd + 16, true);
+  const dec = new TextDecoder();
+  const files = [];
+  for (let n = 0; n < count && dv.getUint32(off, true) === 0x02014b50; n++) {
+    const nlen = dv.getUint16(off + 28, true), elen = dv.getUint16(off + 30, true), clen = dv.getUint16(off + 32, true);
+    files.push({
+      name: dec.decode(new Uint8Array(buf, off + 46, nlen)),
+      method: dv.getUint16(off + 10, true),
+      size: dv.getUint32(off + 20, true),
+      local: dv.getUint32(off + 42, true),
+    });
+    off += 46 + nlen + elen + clen;
+  }
+  const isChat = f => /_chat|conversa|whatsapp/i.test(f.name);
+  const txt = files.filter(f => /\.txt$/i.test(f.name)).sort((a, b) => isChat(b) - isChat(a) || b.size - a.size)[0];
+  if (!txt) throw new Error("Não encontrei nenhum .txt dentro do ZIP. Arquivos encontrados: " + (files.map(f => f.name).join(", ") || "nenhum"));
+  const lnl = dv.getUint16(txt.local + 26, true), lel = dv.getUint16(txt.local + 28, true);
+  const data = new Uint8Array(buf, txt.local + 30 + lnl + lel, txt.size);
+  if (txt.method === 0) return dec.decode(data);
+  if (txt.method === 8) {
+    const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return await new Response(stream).text();
+  }
+  throw new Error("Formato de compressão do ZIP não suportado.");
+}
+
+async function readFile(file) {
+  const buf = await file.arrayBuffer();
+  const head = new Uint8Array(buf, 0, Math.min(2, buf.byteLength));
+  if (/\.zip$/i.test(file.name) || (head[0] === 0x50 && head[1] === 0x4b)) return unzipChat(buf);
+  return new TextDecoder().decode(buf);
+}
+
+/* ============================ parser ============================ */
+// Caracteres invisíveis que o WhatsApp coloca nas linhas (principalmente no iPhone).
+const MARKS = /[‎‏‪-‮⁦-⁩﻿]/g;
+// Cobre os formatos mais comuns:
+//   24/10/2026 19:04 - Nome: msg          (Android BR)
+//   [24/10/2026, 19:04:12] Nome: msg      (iPhone)
+//   10/24/26, 7:04 PM - Name: msg         (Android EN)
+const HEAD = /^\[?(\d{1,4})[\/.\-](\d{1,2})[\/.\-](\d{1,4})[,\s]+(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?\s*([aApP]\.?\s?[mM]\.?)?\]?\s*(?:[-–—]\s+)?(.*)$/;
+const DELETED = /^(esta mensagem foi apagada|mensagem apagada|voc[eê] apagou esta mensagem|this message was deleted|you deleted this message|se elimin[oó] este mensaje|eliminaste este mensaje)\.?$/i;
+const EDITED = /\s*<(mensagem editada|this message was edited|se edit[oó] este mensaje)>\s*$/i;
+const SYSTEM = /(criptografia de ponta|end-to-end encrypted|cifrados de extremo)/i;
+
+function classify(body) {
+  const b = body.trim(), low = b.toLowerCase();
+  if (DELETED.test(low)) return { kind: "deleted" };
+  const isMarker =
+    (/^<[^>\n]{0,60}>$/.test(b) && /(m[ií]dia|media|multimedia|anexad|attached)/.test(low)) ||
+    (b.length < 160 && /(omitted|omitid[oa]|ocultad[oa])$/.test(low) &&
+      /(imag|foto|photo|[aá]udio|v[ií]deo|figurinha|sticker|gif|document|contat|contact|cart)/.test(low)) ||
+    /\((arquivo anexado|file attached)\)$/.test(low) ||
+    low === "null";
+  if (!isMarker) return { kind: "text" };
+  let media = "other";
+  if (/([aá]udio|\.opus|\.ogg|\.m4a|\.aac|\.mp3|ptt-)/.test(low)) media = "audio";
+  else if (/(figurinha|sticker|\.webp)/.test(low)) media = "sticker";
+  else if (/gif/.test(low)) media = "gif";
+  else if (/(v[ií]deo|\.mp4|\.mov|\.3gp)/.test(low)) media = "video";
+  else if (/(imag|foto|photo|\.jpe?g|\.png|\.heic)/.test(low)) media = "image";
+  else if (/(document|\.pdf|\.docx?|\.xlsx?|arquivo anexado|file attached)/.test(low)) media = "doc";
+  return { kind: "media", media };
+}
+
+function parseChat(raw) {
+  const lines = raw.replace(/\r\n?/g, "\n").split("\n");
+  const entries = [];
+  let cur = null;
+  for (const line of lines) {
+    const clean = line.replace(MARKS, "");
+    const m = HEAD.exec(clean);
+    if (m) {
+      const rest = m[8];
+      const i = rest.indexOf(": ");
+      const author = i > 0 && i <= 80 ? rest.slice(0, i) : (/^[^:]{1,80}:$/.test(rest) ? rest.slice(0, -1) : null);
+      if (author !== null) {
+        cur = { p: [+m[1], +m[2], +m[3]], h: +m[4], mi: +m[5], s: +(m[6] || 0), ap: m[7],
+                a: author.trim(), body: i > 0 ? rest.slice(i + 2) : "" };
+        entries.push(cur);
+      } else {
+        cur = null; // mensagem do sistema (alguém entrou no grupo, mudou a foto...)
+      }
+      continue;
+    }
+    if (cur) cur.body += "\n" + clean;
+  }
+
+  // Descobre se a data está em dia/mês/ano (padrão BR), mês/dia/ano (EUA) ou ano-mês-dia.
+  let order = "DMY";
+  if (entries.some(e => e.p[0] > 31)) order = "YMD";
+  else if (!entries.some(e => e.p[0] > 12) && entries.some(e => e.p[1] > 12)) order = "MDY";
+
+  const msgs = [];
+  for (const e of entries) {
+    let [d, mo, y] = order === "DMY" ? e.p : order === "MDY" ? [e.p[1], e.p[0], e.p[2]] : [e.p[2], e.p[1], e.p[0]];
+    if (y < 100) y += 2000;
+    let h = e.h;
+    if (e.ap) {
+      const pm = /p/i.test(e.ap);
+      if (pm && h < 12) h += 12;
+      if (!pm && h === 12) h = 0;
+    }
+    const t = new Date(y, mo - 1, d, h, e.mi, e.s);
+    if (isNaN(t)) continue;
+    let body = e.body.replace(/\s+$/, "");
+    if (SYSTEM.test(body)) continue;
+    const edited = EDITED.test(body);
+    if (edited) body = body.replace(EDITED, "");
+    msgs.push({ t, a: e.a, text: body, edited, ...classify(body) });
+  }
+  return msgs;
+}
+
+/* ============================ análise ============================ */
+const URL_RE = /https?:\/\/\S+|www\.\S+/gi;
+const EMOJI_RE = /\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic}|\p{Emoji_Modifier})*|[\u{1F1E6}-\u{1F1FF}]{2}/gu;
+const WORD_RE = /[\p{L}\p{N}]+/gu;
+const rx = s => new RegExp("(?<![\\p{L}\\p{N}])(?:" + s + ")(?![\\p{L}\\p{N}])", "giu");
+
+// Contadores divertidos. Cada um vira um card com o ranking por pessoa.
+const FUN = [
+  { k: "teamo", label: "“Te amo”", emoji: "❤️",
+    re: rx("(?:eu\\s*)?t+[ei]+\\s*a+m+[ou]+h*|amo[\\s-]+te|amo\\s+(?:muito\\s+|tanto\\s+|demais\\s+)?(?:vcs?|voc[eê]s?|tu)|amo\\s+demais|i\\s+love\\s+(?:you|u|ya)|love\\s+(?:you|u|ya)|ily|te\\s+adoro") },
+  { k: "saudade", label: "Saudades", emoji: "🥺", re: rx("saudades?|sdds?|miss\\s+(?:you|u)") },
+  { k: "carinho", label: "Apelidos carinhosos", emoji: "🥰",
+    re: rx("amor(?:zinho|zinha|z[aã]o)?|mor(?:zinho|zinha)?|minha\\s+vida|bb|beb[eê]|baby|bae|gatinh[oa]|princes[ao]|lind[oa]|xuxu|chuchu|nen[eé]m|benzinho|fofinh[oa]|meu\\s+bem") },
+  { k: "beijo", label: "Beijos", emoji: "😘", re: rx("beij(?:o|os|inho|inhos|[aã]o|a|ar|ando)|bjs?|bjos?|beijocas?|kiss(?:es)?") },
+  { k: "risada", label: "Risadas (kkk, haha, rs)", emoji: "😂", re: rx("k{3,}|(?:ha){2,}h?|(?:he){2,}|(?:rs){2,}|(?:hu?a){2,}|ka(?:ka)+|lol|lmao") },
+  { k: "bomdia", label: "“Bom dia”", emoji: "☀️", re: rx("bo[mn]\\s*dia+|good\\s+morning") },
+  { k: "boanoite", label: "“Boa noite”", emoji: "🌙", re: rx("boa\\s*noite+|good\\s+night") },
+  { k: "desculpa", label: "Pedidos de desculpa", emoji: "🙏", re: rx("desculp\\p{L}*|foi\\s+mal|perd[aã]o|me\\s+perdoa|sorry") },
+  { k: "obrigado", label: "Agradecimentos", emoji: "🤗", re: rx("obrigad[oa]s?|brigad[oa]|valeu|vlw|obg|thanks?|thank\\s+you") },
+  { k: "palavrao", label: "Palavrões", emoji: "🤬", re: rx("porra|caralho|merda|pqp|puta|fdp|droga|cacete|bosta|vsf|krl|crl|caraio|fuck|shit") },
+  { k: "fome", label: "Fome e comida", emoji: "🍕", re: rx("fome|comer|comida|almo[cç]o|almo[cç]ar|janta|jantar|lanche|pizza|hamb[uú]rguer|a[cç]a[ií]|lanchinho") },
+  { k: "sono", label: "Sono e cansaço", emoji: "😴", re: rx("sono|dormir|dormi|cansad[oa]|mimir|soninho") },
+];
+const FUN_BY_KEY = Object.fromEntries(FUN.map(f => [f.k, f]));
+
+const STOP = new Set(`que não nao com uma para pra pro por mas mais muito muita muitos muitas você voce vocês voces
+  vcs tbm também tambem isso isto esse essa esses essas este esta estes estas aquele aquela aquilo ele ela eles elas
+  nós dele dela deles delas meu minha meus minhas teu tua seu sua seus suas aqui ali lá então entao ent assim nada
+  tudo coisa num numa pelo pela pelos pelas qual quais quem lhe lhes seja são sao estão estao estava estou está tá
+  tô tava tem ter tenho tinha vai vou vamos fazer faz fiz já ainda depois antes bem sei acho deu dar ate até porque
+  pois quando onde como sim né hoje agora mesmo mesma tambem sem dos das nos nas aos foi fui ser era sou também
+  pq oq cmg ctg mto mta msm the and you that for this with are was have not but what just your can all its it's
+  dont don't i'm bom boa dia noite`.split(/\s+/).filter(Boolean));
+const isLaugh = w => /^k{2,}$|^(ha)+h?$|^(he)+$|^(rs)+$|^(hu?a)+$/.test(w);
+
+function analyze(msgs) {
+  const people = new Map();
+  const P = name => {
+    if (!people.has(name)) people.set(name, {
+      name, msgs: 0, textMsgs: 0, words: 0, chars: 0, mediaTotal: 0,
+      media: { audio: 0, image: 0, sticker: 0, video: 0, gif: 0, doc: 0, other: 0 },
+      deleted: 0, edited: 0, emojiCount: 0, emojis: new Map(), links: 0, questions: 0,
+      fun: Object.fromEntries(FUN.map(f => [f.k, 0])), starts: 0, resp: [], maxRun: 0, maxRunAt: null,
+      night: 0, early: 0, wordFreq: new Map(), longest: null, hours: Array(24).fill(0), wd: Array(7).fill(0),
+      firstOfDay: 0,
+    });
+    return people.get(name);
+  };
+
+  const dayCount = new Map(), monthByPerson = new Map(), loveByMonth = new Map();
+  const heat = Array.from({ length: 7 }, () => Array(24).fill(0));
+  const words = new Map(), emojis = new Map(), emojiShow = new Map();
+  let prev = null, run = 0, longestGap = null, longest = null, firstLove = null;
+  const loveMsgs = [];
+  let lastDay = null;
+
+  msgs.forEach((m, idx) => {
+    const s = P(m.a);
+    s.msgs++;
+    const h = m.t.getHours(), wd = m.t.getDay(), dk = dayKey(m.t), mk = monthKey(m.t);
+    s.hours[h]++; s.wd[wd]++; heat[wd][h]++;
+    if (h < 5) s.night++;
+    if (h >= 5 && h < 9) s.early++;
+    inc(dayCount, dk);
+    if (!monthByPerson.has(mk)) monthByPerson.set(mk, new Map());
+    inc(monthByPerson.get(mk), m.a);
+    if (dk !== lastDay) { s.firstOfDay++; lastDay = dk; }
+    if (m.edited) s.edited++;
+
+    if (prev) {
+      const gap = m.t - prev.t;
+      if (prev.a !== m.a && gap >= 0 && gap < 12 * 3600e3) s.resp.push(gap);
+      if (gap > 6 * 3600e3) s.starts++;
+      if (!longestGap || gap > longestGap.ms) longestGap = { ms: gap, from: prev.t, to: m.t, who: m.a };
+    } else s.starts++;
+    run = prev && prev.a === m.a ? run + 1 : 1;
+    if (run > s.maxRun) { s.maxRun = run; s.maxRunAt = m.t; }
+    prev = m;
+
+    if (m.kind === "deleted") { s.deleted++; return; }
+    if (m.kind === "media") { s.mediaTotal++; s.media[m.media]++; return; }
+
+    const text = m.text;
+    s.textMsgs++;
+    s.chars += text.length;
+    const links = text.match(URL_RE);
+    if (links) s.links += links.length;
+    const noUrl = text.replace(URL_RE, " ");
+    if (noUrl.includes("?")) s.questions++;
+
+    for (const e of noUrl.match(EMOJI_RE) || []) {
+      const key = e.replace(/️/g, "");
+      if (!emojiShow.has(key) || e.length > emojiShow.get(key).length) emojiShow.set(key, e);
+      inc(emojis, key); inc(s.emojis, key); s.emojiCount++;
+    }
+
+    const low = noUrl.toLowerCase();
+    for (const f of FUN) {
+      const c = (low.match(f.re) || []).length;
+      if (!c) continue;
+      s.fun[f.k] += c;
+      if (f.k === "teamo") {
+        inc(loveByMonth, mk, c);
+        loveMsgs.push(m);
+        if (!firstLove) firstLove = { m, idx };
+      }
+    }
+
+    const toks = low.match(WORD_RE) || [];
+    s.words += toks.length;
+    for (const w of toks) {
+      if (w.length < 3 || STOP.has(w) || /^\d+$/.test(w) || isLaugh(w)) continue;
+      inc(words, w); inc(s.wordFreq, w);
+    }
+    if (!s.longest || text.length > s.longest.text.length) s.longest = m;
+    if (!longest || text.length > longest.text.length) longest = m;
+  });
+
+  const list = [...people.values()].sort((a, b) => b.msgs - a.msgs);
+  for (const s of list) {
+    s.medianResp = s.resp.length >= 3 ? median(s.resp) : null;
+    s.avgWords = s.textMsgs ? s.words / s.textMsgs : 0;
+  }
+
+  // Sequência de dias seguidos conversando
+  const dayKeys = [...dayCount.keys()].sort();
+  let streak = { len: 0 }, curLen = 0, curStart = null, prevNum = null;
+  for (const k of dayKeys) {
+    const n = keyToDayNum(k);
+    if (prevNum !== null && n === prevNum + 1) curLen++; else { curLen = 1; curStart = k; }
+    if (curLen > streak.len) streak = { len: curLen, from: curStart, to: k };
+    prevNum = n;
+  }
+  const busiest = topN(dayCount, 1)[0];
+
+  // Todos os meses entre o primeiro e o último (inclusive os sem mensagem)
+  const months = [];
+  if (msgs.length) {
+    const d = new Date(msgs[0].t.getFullYear(), msgs[0].t.getMonth(), 1);
+    const end = monthKey(msgs[msgs.length - 1].t);
+    while (true) { const k = monthKey(d); months.push(k); if (k === end || months.length > 600) break; d.setMonth(d.getMonth() + 1); }
+  }
+
+  const first = msgs[0].t, last = msgs[msgs.length - 1].t;
+  const spanDays = keyToDayNum(dayKey(last)) - keyToDayNum(dayKey(first)) + 1;
+  const sum = k => list.reduce((acc, s) => acc + (typeof k === "function" ? k(s) : s[k]), 0);
+
+  return {
+    msgs, people: list, words, emojis, emojiShow, dayCount, monthByPerson, loveByMonth, months, heat,
+    first, last, spanDays, activeDays: dayCount.size, streak, busiest, longestGap, longest, firstLove, loveMsgs,
+    totals: {
+      msgs: msgs.length, words: sum("words"), media: sum("mediaTotal"), emojis: sum("emojiCount"),
+      audio: sum(s => s.media.audio), stickers: sum(s => s.media.sticker), teamo: sum(s => s.fun.teamo), deleted: sum("deleted"),
+    },
+  };
+}
+
+/* ============================ gráficos (HTML/CSS puro) ============================ */
+function seriesPeople(R) {
+  const top = R.people.slice(0, COLORS.length);
+  const out = top.map((p, i) => ({ names: [p.name], label: p.name, color: COLORS[i] }));
+  if (R.people.length > COLORS.length)
+    out.push({ names: R.people.slice(COLORS.length).map(p => p.name), label: "Outros", color: OTHER_COLOR });
+  return out;
+}
+function colorOf(R, name) {
+  const i = R.people.findIndex(p => p.name === name);
+  return i >= 0 && i < COLORS.length ? COLORS[i] : OTHER_COLOR;
+}
+function legend(series) {
+  return `<div class="legend">${series.map(s => `<span><i style="background:${s.color}"></i>${esc(s.label)}</span>`).join("")}</div>`;
+}
+
+// Barras horizontais: rows = [{label, value, color, text?}]
+function hbars(rows) {
+  const max = Math.max(1, ...rows.map(r => r.value));
+  return `<div class="hb">${rows.map(r => `
+    <div class="name" title="${esc(r.label)}">${esc(r.label)}</div>
+    <div class="bar"><span style="width:${(100 * r.value / max).toFixed(2)}%;background:${r.color || "var(--accent)"}"></span></div>
+    <div class="val">${r.text ?? fmt(r.value)}</div>`).join("")}</div>`;
+}
+
+// Colunas empilhadas: series = [{label, color, values[]}]
+function colChart(labels, series, { height = 150, every = 1, titles } = {}) {
+  const totals = labels.map((_, i) => series.reduce((a, s) => a + s.values[i], 0));
+  const max = Math.max(1, ...totals);
+  return `<div class="cols" style="--h:${height}px">${labels.map((l, i) => {
+    const tip = (titles ? titles[i] : l) + ": " + fmt(totals[i]) +
+      (series.length > 1 ? "\n" + series.filter(s => s.values[i]).map(s => `${s.label}: ${fmt(s.values[i])}`).join("\n") : "");
+    return `<div class="col" title="${esc(tip)}"><div class="stack">${series.map(s => s.values[i]
+      ? `<span style="height:${(100 * s.values[i] / max).toFixed(2)}%;background:${s.color}"></span>` : "").join("")}</div>
+      <div class="lbl">${i % every === 0 ? esc(l) : ""}</div></div>`;
+  }).join("")}</div>`;
+}
+
+function heatmap(heat) {
+  const max = Math.max(1, ...heat.flat());
+  let html = `<div class="heat"><div class="h"></div>`;
+  for (let h = 0; h < 24; h++) html += `<div class="h">${h % 3 === 0 ? h + "h" : ""}</div>`;
+  heat.forEach((row, d) => {
+    html += `<div class="d">${DIAS[d]}</div>`;
+    row.forEach((v, h) => html += `<div class="c" style="--a:${(0.06 + 0.94 * v / max).toFixed(3)}" title="${DIAS_LONGO[d]} ${h}h: ${fmt(v)} mensagens"></div>`);
+  });
+  return html + "</div>";
+}
+
+function msgBubble(m, focus = false) {
+  const body = m.kind === "media" ? "📎 (mídia)" : m.kind === "deleted" ? "🗑️ (mensagem apagada)" : m.text;
+  return `<div class="msg${focus ? " focus" : ""}"><span class="meta">${esc(m.a)} · ${fmtDateTime(m.t)}</span>${esc(body)}</div>`;
+}
+
+/* ============================ renderização ============================ */
+let R = null;
+
+function render(r, demo = false, source = "") {
+  R = r;
+  const T = r.totals, people = r.people, top = people[0];
+  const series = seriesPeople(r);
+  const multi = people.length > 1;
+  const perDay = T.msgs / r.spanDays;
+
+  const tile = (num, lbl) => `<div class="card tile"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`;
+  const byPerson = (getter, textFn) => hbars(people.slice(0, 12).map(p => ({
+    label: p.name, value: getter(p), color: colorOf(r, p.name), text: textFn ? textFn(p) : undefined,
+  })));
+
+  let html = `
+  <header class="hero"><h1>💬 ${multi && people.length === 2 ? esc(people[0].name) + " & " + esc(people[1].name) : "Resultado da análise"}</h1></header>
+  ${source ? `<p class="source muted small">📄 Arquivo analisado: <b>${esc(source)}</b></p>` : ""}
+  ${demo ? `<p class="card" style="text-align:center;border-color:var(--accent)">⚠️ <b>Esta é uma conversa de EXEMPLO, inventada</b>
+    (Ana e Pedro). Para ver a sua, clique em “Analisar outra conversa” lá embaixo e escolha o arquivo exportado.</p>` : ""}
+  <div class="headline">
+    ${multi ? "Vocês trocaram" : "Foram"} <b>${fmt(T.msgs)}</b> mensagens em <b>${fmt(r.spanDays)}</b> dias
+    (de ${fmtDate(r.first)} a ${fmtDate(r.last)}) — uma média de <b>${perDay.toFixed(1).replace(".", ",")}</b> por dia.
+    ${multi ? `Quem mais falou foi <b>${esc(top.name)}</b>, com ${pct(top.msgs, T.msgs)} das mensagens.` : ""}
+    ${T.teamo ? `E rolaram <b>${fmt(T.teamo)}</b> “te amo” ❤️` : ""}
+  </div>
+
+  <section>
+    <h2 class="section-title">📊 Resumo</h2>
+    <div class="grid tiles">
+      ${tile(fmt(T.msgs), "mensagens")}
+      ${tile(fmt(T.words), "palavras")}
+      ${tile(fmt(r.activeDays), `dias conversando (${pct(r.activeDays, r.spanDays)} do período)`)}
+      ${tile(perDay.toFixed(1).replace(".", ","), "mensagens por dia")}
+      ${tile(fmt(T.media), "fotos, áudios e mídias")}
+      ${tile(fmt(T.emojis), "emojis")}
+      ${tile(fmt(r.streak.len), "dias seguidos sem parar de conversar (recorde)")}
+      ${tile(fmt(T.teamo), "“te amo” ❤️")}
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">🗣️ Quem manda mais mensagens</h2>
+    <div class="grid">
+      <div class="card"><h2>Mensagens</h2>${byPerson(p => p.msgs, p => `${fmt(p.msgs)} · ${pct(p.msgs, T.msgs)}`)}</div>
+      <div class="card"><h2>Palavras</h2>${byPerson(p => p.words, p => `${fmt(p.words)} · ${pct(p.words, T.words)}`)}</div>
+      <div class="card"><h2>Tamanho médio das mensagens</h2>${byPerson(p => p.avgWords, p => p.avgWords.toFixed(1).replace(".", ",") + " palavras")}</div>
+      ${multi ? `<div class="card"><h2>Tempo típico de resposta</h2>
+        <p class="muted small">Mediana do tempo até responder (ignorando silêncios de +12h)</p>
+        ${hbars(people.slice(0, 12).filter(p => p.medianResp != null).map(p => ({ label: p.name, value: p.medianResp, color: colorOf(r, p.name), text: fmtDur(p.medianResp) })))}</div>` : ""}
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Ficha completa</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Pessoa</th><th>Mensagens</th><th>Palavras</th><th>Mídias</th><th>Áudios</th><th>Figurinhas</th>
+          <th>Emojis</th><th>Links</th><th>Perguntas</th><th>Apagadas</th><th>Editadas</th><th>Puxou assunto</th><th>Maior sequência</th></tr></thead>
+        <tbody>${people.slice(0, 30).map(p => `<tr>
+          <td><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${colorOf(r, p.name)};margin-right:6px"></i>${esc(p.name)}</td>
+          <td>${fmt(p.msgs)}</td><td>${fmt(p.words)}</td><td>${fmt(p.mediaTotal)}</td><td>${fmt(p.media.audio)}</td>
+          <td>${fmt(p.media.sticker)}</td><td>${fmt(p.emojiCount)}</td><td>${fmt(p.links)}</td><td>${fmt(p.questions)}</td>
+          <td>${fmt(p.deleted)}</td><td>${fmt(p.edited)}</td><td>${fmt(p.starts)}</td><td>${fmt(p.maxRun)} seguidas</td></tr>`).join("")}
+        </tbody></table></div>
+      <p class="muted small">“Puxou assunto” = mandou a primeira mensagem depois de 6h+ de silêncio.
+        “Maior sequência” = mais mensagens seguidas sem ninguém responder.</p>
+    </div>
+  </section>`;
+
+  /* ---- te amo ---- */
+  const love = FUN_BY_KEY.teamo;
+  const loveMonths = r.months.filter(k => r.loveByMonth.get(k));
+  const bestLoveMonth = topN(r.loveByMonth, 1)[0];
+  html += `
+  <section>
+    <h2 class="section-title">❤️ Cantinho do amor</h2>
+    <div class="grid">
+      <div class="card love-big">
+        <div class="num">${fmt(T.teamo)}</div>
+        <div>“te amo” no total</div>
+        <p class="muted small">${T.teamo ? `≈ ${(T.teamo / r.spanDays).toFixed(2).replace(".", ",")} por dia` : "Nenhum “te amo” ainda… 👀"}</p>
+      </div>
+      <div class="card"><h2>Quem manda mais “te amo”</h2>${byPerson(p => p.fun.teamo, p => `${fmt(p.fun.teamo)} · ${pct(p.fun.teamo, T.teamo)}`)}</div>
+      ${r.firstLove ? `<div class="card"><h2>💌 O primeiro “te amo”</h2>
+        <p class="muted small">Foi ${r.firstLove.m.t - r.first < 864e5 ? "logo no começo" : `${fmt((r.firstLove.m.t - r.first) / 864e5)} dias depois da primeira mensagem`}</p>
+        ${msgBubble(r.firstLove.m, true)}</div>` : ""}
+      ${bestLoveMonth ? `<div class="card"><h2>📅 Mês mais apaixonado</h2>
+        <div class="tile"><div class="num">${MESES[+bestLoveMonth[0].slice(5) - 1]}/${bestLoveMonth[0].slice(0, 4)}</div>
+        <div class="lbl">${fmt(bestLoveMonth[1])} “te amo” nesse mês</div></div></div>` : ""}
+    </div>
+    ${loveMonths.length ? `<div class="card" style="margin-top:16px"><h2>“Te amo” ao longo do tempo</h2>
+      ${colChart(r.months.map(k => MESES[+k.slice(5) - 1]), [{ label: "te amo", color: "var(--accent)", values: r.months.map(k => r.loveByMonth.get(k) || 0) }],
+        { height: 120, every: Math.ceil(r.months.length / 14), titles: r.months.map(k => MESES[+k.slice(5) - 1] + "/" + k.slice(0, 4)) })}</div>` : ""}
+    ${r.loveMsgs.length ? `<details class="card" style="margin-top:16px"><summary><b>📝 Conferir as ${fmt(r.loveMsgs.length)} mensagens contadas</b></summary>
+      <p class="muted small">Conta “te amo”, “eu te amo”, “te amoooo”, “teamo”, “amo você/vc”, “amo muito vc”, “amo-te”, “te adoro” e “I love you”.
+        Achou algum que ficou de fora? Use a busca mais abaixo para procurar.</p>
+      ${r.loveMsgs.slice(0, 2000).map(m => msgBubble(m)).join("")}</details>` : ""}
+  </section>`;
+
+  /* ---- prêmios ---- */
+  const awards = [];
+  const award = (emo, title, getter, desc, { min = 1, low = false, filter } = {}) => {
+    let cands = people.filter(p => (filter ? filter(p) : true) && getter(p) != null && (low || getter(p) >= min));
+    if (!cands.length) return;
+    cands.sort((a, b) => low ? getter(a) - getter(b) : getter(b) - getter(a));
+    awards.push({ emo, title, who: cands[0].name, desc: desc(cands[0]) });
+  };
+  award("🗣️", "Tagarela", p => p.msgs, p => `${fmt(p.msgs)} mensagens`);
+  award("📜", "Rei/Rainha do textão", p => p.avgWords, p => `${p.avgWords.toFixed(1).replace(".", ",")} palavras por mensagem`);
+  if (multi) {
+    award("⚡", "Responde na velocidade da luz", p => p.medianResp, p => `responde em ~${fmtDur(p.medianResp)}`, { low: true, filter: p => p.medianResp != null });
+    award("🐢", "Visualiza e some", p => p.medianResp, p => `demora ~${fmtDur(p.medianResp)} pra responder`, { filter: p => p.medianResp != null });
+    award("🚀", "Puxa-assunto", p => p.starts, p => `começou a conversa ${fmt(p.starts)} vezes`);
+  }
+  award("🔁", "Metralhadora", p => p.maxRun, p => `${fmt(p.maxRun)} mensagens seguidas em ${fmtDate(p.maxRunAt)}`, { min: 2 });
+  award("❤️", "Mais romântico(a)", p => p.fun.teamo, p => `${fmt(p.fun.teamo)} “te amo”`);
+  award("🥰", "Mais carinhoso(a)", p => p.fun.carinho, p => `${fmt(p.fun.carinho)} apelidos fofos`);
+  award("😂", "Risada fácil", p => p.fun.risada, p => `${fmt(p.fun.risada)} kkkk/haha`);
+  award("🦉", "Corujão", p => p.msgs >= 20 ? p.night / p.msgs : null, p => `${pct(p.night, p.msgs)} das mensagens entre 0h e 5h`, { min: 0.0001 });
+  award("🌅", "Madrugador(a)", p => p.msgs >= 20 ? p.early / p.msgs : null, p => `${pct(p.early, p.msgs)} das mensagens entre 5h e 9h`, { min: 0.0001 });
+  award("🎤", "Podcaster", p => p.media.audio, p => `${fmt(p.media.audio)} áudios`);
+  award("📸", "Paparazzi", p => p.mediaTotal, p => `${fmt(p.mediaTotal)} mídias enviadas`);
+  award("🖼️", "Figurinheiro(a)", p => p.media.sticker, p => `${fmt(p.media.sticker)} figurinhas`);
+  award("😀", "Emojiholic", p => p.emojiCount, p => `${fmt(p.emojiCount)} emojis`);
+  award("❓", "Curioso(a)", p => p.questions, p => `${fmt(p.questions)} perguntas`);
+  award("🙏", "Pede desculpa por tudo", p => p.fun.desculpa, p => `${fmt(p.fun.desculpa)} desculpas`);
+  award("🥺", "Saudoso(a)", p => p.fun.saudade, p => `${fmt(p.fun.saudade)} saudades`);
+  award("🗑️", "Apagador(a) de provas", p => p.deleted, p => `${fmt(p.deleted)} mensagens apagadas`);
+  award("✏️", "Revisor(a)", p => p.edited, p => `${fmt(p.edited)} mensagens editadas`);
+  award("🤬", "Boca suja", p => p.fun.palavrao, p => `${fmt(p.fun.palavrao)} palavrões`);
+  award("🍕", "Sempre com fome", p => p.fun.fome, p => `falou de comida ${fmt(p.fun.fome)} vezes`);
+  award("😴", "Sempre com sono", p => p.fun.sono, p => `reclamou de sono ${fmt(p.fun.sono)} vezes`);
+  award("🔗", "Compartilha tudo", p => p.links, p => `${fmt(p.links)} links`);
+
+  html += `
+  <section>
+    <h2 class="section-title">🏆 Prêmios</h2>
+    <div class="grid">${awards.map(a => `<div class="card award"><div class="emo">${a.emo}</div><div>
+      <div class="t">${esc(a.title)}</div><div class="w" style="color:${colorOf(r, a.who)}">${esc(a.who)}</div>
+      <div class="muted small">${esc(a.desc)}</div></div></div>`).join("")}</div>
+  </section>`;
+
+  /* ---- contadores divertidos ---- */
+  html += `
+  <section>
+    <h2 class="section-title">🎯 Contadores</h2>
+    <div class="grid">${FUN.filter(f => f.k !== "teamo").map(f => {
+      const total = people.reduce((a, p) => a + p.fun[f.k], 0);
+      return `<div class="card"><h2>${f.emoji} ${f.label} <span class="muted">· ${fmt(total)}</span></h2>
+        ${total ? byPerson(p => p.fun[f.k]) : `<p class="muted">Nenhum por aqui.</p>`}</div>`;
+    }).join("")}
+      ${T.audio ? `<div class="card"><h2>🎤 Áudios <span class="muted">· ${fmt(T.audio)}</span></h2>${byPerson(p => p.media.audio)}</div>` : ""}
+      ${T.stickers ? `<div class="card"><h2>🖼️ Figurinhas <span class="muted">· ${fmt(T.stickers)}</span></h2>${byPerson(p => p.media.sticker)}</div>` : ""}
+      <div class="card"><h2>📎 Mídias <span class="muted">· ${fmt(T.media)}</span></h2>${byPerson(p => p.mediaTotal)}</div>
+    </div>
+    <p class="muted small">Se a conversa foi exportada no Android, áudios, fotos e figurinhas aparecem todos como
+      “mídia oculta”, então só o total de mídias é preciso.</p>
+  </section>`;
+
+  /* ---- atividade ---- */
+  const hourSeries = series.map(s => ({ ...s, values: Array.from({ length: 24 }, (_, h) =>
+    s.names.reduce((a, n) => a + people.find(p => p.name === n).hours[h], 0)) }));
+  const wdSeries = series.map(s => ({ ...s, values: Array.from({ length: 7 }, (_, d) =>
+    s.names.reduce((a, n) => a + people.find(p => p.name === n).wd[d], 0)) }));
+  const monthSeries = series.map(s => ({ ...s, values: r.months.map(k =>
+    s.names.reduce((a, n) => a + (r.monthByPerson.get(k)?.get(n) || 0), 0)) }));
+  const hourTotals = Array.from({ length: 24 }, (_, h) => hourSeries.reduce((a, s) => a + s.values[h], 0));
+  const favHour = hourTotals.indexOf(Math.max(...hourTotals));
+  const wdTotals = Array.from({ length: 7 }, (_, d) => wdSeries.reduce((a, s) => a + s.values[d], 0));
+  const favWd = wdTotals.indexOf(Math.max(...wdTotals));
+  const busiestDate = r.busiest ? new Date(r.busiest[0] + "T12:00:00") : null;
+  const busiestMonth = r.months.reduce((best, k, i) => {
+    const v = monthSeries.reduce((a, s) => a + s.values[i], 0);
+    return v > best.v ? { k, v } : best;
+  }, { k: null, v: -1 });
+
+  html += `
+  <section>
+    <h2 class="section-title">⏰ Quando vocês conversam</h2>
+    <div class="grid tiles">
+      ${tile(favHour + "h", "horário favorito")}
+      ${tile(DIAS_LONGO[favWd], "dia da semana favorito")}
+      ${busiestDate ? tile(fmtDate(busiestDate), `dia mais agitado (${fmt(r.busiest[1])} mensagens)`) : ""}
+      ${busiestMonth.k ? tile(MESES[+busiestMonth.k.slice(5) - 1] + "/" + busiestMonth.k.slice(0, 4), `mês mais agitado (${fmt(busiestMonth.v)} mensagens)`) : ""}
+      ${r.streak.len ? tile(fmt(r.streak.len) + " dias", `maior sequência: ${fmtDate(new Date(r.streak.from + "T12:00:00"))} a ${fmtDate(new Date(r.streak.to + "T12:00:00"))}`) : ""}
+      ${r.longestGap ? tile(fmtDur(r.longestGap.ms), `maior silêncio (até ${fmtDate(r.longestGap.to)}, quebrado por ${esc(r.longestGap.who)})`) : ""}
+    </div>
+    <div class="card" style="margin-top:16px"><h2>Por hora do dia</h2>${multi ? legend(series) : ""}
+      ${colChart(Array.from({ length: 24 }, (_, h) => h + "h"), hourSeries, { every: 3 })}</div>
+    <div class="grid" style="margin-top:16px">
+      <div class="card"><h2>Por dia da semana</h2>${colChart(DIAS, wdSeries, { height: 130 })}</div>
+      <div class="card"><h2>Mapa de calor (dia × hora)</h2>${heatmap(r.heat)}</div>
+    </div>
+    <div class="card" style="margin-top:16px"><h2>Mensagens por mês</h2>${multi ? legend(series) : ""}
+      ${colChart(r.months.map(k => MESES[+k.slice(5) - 1] + (k.endsWith("-01") || r.months.length <= 12 ? "/" + k.slice(2, 4) : "")),
+        monthSeries, { every: Math.ceil(r.months.length / 14), titles: r.months.map(k => MESES[+k.slice(5) - 1] + "/" + k.slice(0, 4)) })}</div>
+  </section>`;
+
+  /* ---- palavras ---- */
+  const cloud = topN(r.words, 60);
+  const cmax = cloud.length ? cloud[0][1] : 1, cmin = cloud.length ? cloud[cloud.length - 1][1] : 1;
+  const shuffled = cloud.map((w, i) => [w, (i * 37) % cloud.length]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
+  html += `
+  <section>
+    <h2 class="section-title">🔤 Palavras mais usadas</h2>
+    <div class="card"><div class="cloud">${shuffled.map(([w, c], i) => {
+      const k = cmax === cmin ? 1 : (Math.sqrt(c) - Math.sqrt(cmin)) / (Math.sqrt(cmax) - Math.sqrt(cmin));
+      return `<span style="font-size:${(0.85 + k * 1.9).toFixed(2)}rem;color:${COLORS[i % COLORS.length]}" title="${fmt(c)} vezes">${esc(w)}</span>`;
+    }).join("")}</div></div>
+    <div class="grid" style="margin-top:16px">
+      <div class="card"><h2>Top 20 geral</h2>${hbars(topN(r.words, 20).map(([w, c]) => ({ label: w, value: c })))}</div>
+      ${multi ? people.slice(0, 6).map(p => `<div class="card"><h2 style="color:${colorOf(r, p.name)}">${esc(p.name)}</h2>
+        <div class="chips">${topN(p.wordFreq, 20).map(([w, c]) => `<span class="chip">${esc(w)} <b>${fmt(c)}</b></span>`).join("")}</div></div>`).join("") : ""}
+    </div>
+  </section>`;
+
+  /* ---- emojis ---- */
+  const showE = k => esc(r.emojiShow.get(k) || k);
+  html += `
+  <section>
+    <h2 class="section-title">😍 Emojis favoritos</h2>
+    <div class="grid">
+      <div class="card"><h2>Top 20</h2>${r.emojis.size ? `<div class="emoji-list">${topN(r.emojis, 20).map(([e, c]) =>
+        `<div><div class="e">${showE(e)}</div><div class="n">${fmt(c)}</div></div>`).join("")}</div>` : `<p class="muted">Nenhum emoji encontrado.</p>`}</div>
+      ${multi ? people.slice(0, 6).filter(p => p.emojis.size).map(p => `<div class="card"><h2 style="color:${colorOf(r, p.name)}">${esc(p.name)}</h2>
+        <div class="emoji-list">${topN(p.emojis, 8).map(([e, c]) => `<div><div class="e">${showE(e)}</div><div class="n">${fmt(c)}</div></div>`).join("")}</div></div>`).join("") : ""}
+    </div>
+  </section>`;
+
+  /* ---- busca ---- */
+  html += `
+  <section>
+    <h2 class="section-title">🔎 Quantas vezes falamos…?</h2>
+    <div class="card">
+      <input type="search" id="q" placeholder="Digite uma palavra ou frase (ex.: saudade, pizza, casamento)" autocomplete="off">
+      <div id="qres" style="margin-top:12px"></div>
+    </div>
+  </section>`;
+
+  /* ---- momentos ---- */
+  html += `
+  <section>
+    <h2 class="section-title">📖 Momentos</h2>
+    <div class="grid">
+      <div class="card"><h2>👋 Como tudo começou</h2>${r.msgs.slice(0, 5).map(m => msgBubble(m)).join("")}</div>
+      ${r.longest ? `<div class="card"><h2>📜 O maior textão</h2>
+        <p class="muted small">${fmt(r.longest.text.length)} caracteres</p>
+        ${msgBubble({ ...r.longest, text: r.longest.text.length > 700 ? r.longest.text.slice(0, 700) + "…" : r.longest.text })}</div>` : ""}
+      <div class="card"><h2>🎲 Lembrança aleatória</h2>
+        <div id="memory"></div>
+        <p style="text-align:center"><button class="btn" id="memBtn">Sortear outra</button></p></div>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <button class="btn" id="copy">📋 Copiar resumo</button>
+    <button class="btn ghost" id="again">📂 Analisar outra conversa</button>
+  </div>`;
+
+  const out = $("#results");
+  out.innerHTML = html;
+  out.hidden = false;
+  $("#start").hidden = true;
+  window.scrollTo(0, 0);
+
+  $("#q").addEventListener("input", debounce(e => search(e.target.value), 200));
+  $("#memBtn").addEventListener("click", randomMemory);
+  $("#again").addEventListener("click", () => { out.hidden = true; $("#start").hidden = false; $("#file").value = ""; window.scrollTo(0, 0); });
+  $("#copy").addEventListener("click", copySummary);
+  randomMemory();
+}
+
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+function search(q) {
+  const box = $("#qres");
+  const needle = norm(q.trim());
+  if (needle.length < 2) { box.innerHTML = ""; return; }
+  const re = new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g");
+  const per = new Map(), perMonth = new Map(), hits = [];
+  let total = 0;
+  for (const m of R.msgs) {
+    if (m.kind !== "text") continue;
+    m.norm ??= norm(m.text);
+    const c = (m.norm.match(re) || []).length;
+    if (!c) continue;
+    total += c; inc(per, m.a, c); inc(perMonth, monthKey(m.t), c); hits.push(m);
+  }
+  if (!total) { box.innerHTML = `<p class="muted">Ninguém falou “${esc(q.trim())}” nessa conversa.</p>`; return; }
+  box.innerHTML = `
+    <p><b>${fmt(total)}</b> vezes em ${fmt(hits.length)} mensagens.</p>
+    ${hbars(R.people.filter(p => per.get(p.name)).map(p => ({ label: p.name, value: per.get(p.name), color: colorOf(R, p.name) })))}
+    <h3>Ao longo do tempo</h3>
+    ${colChart(R.months.map(k => MESES[+k.slice(5) - 1]), [{ label: q, color: "var(--accent2)", values: R.months.map(k => perMonth.get(k) || 0) }],
+      { height: 90, every: Math.ceil(R.months.length / 14), titles: R.months.map(k => MESES[+k.slice(5) - 1] + "/" + k.slice(0, 4)) })}
+    <h3>Primeira vez</h3>${msgBubble(hits[0])}
+    ${hits.length > 1 ? `<h3>Mais recentes</h3>${hits.slice(-5).reverse().map(m => msgBubble(m)).join("")}` : ""}`;
+}
+
+function randomMemory() {
+  const ok = [];
+  R.msgs.forEach((m, i) => { if (m.kind === "text" && m.text.split(/\s+/).length >= 4) ok.push(i); });
+  const box = $("#memory");
+  if (!ok.length) { box.innerHTML = `<p class="muted">Sem mensagens suficientes.</p>`; return; }
+  const i = ok[Math.floor(Math.random() * ok.length)];
+  box.innerHTML = R.msgs.slice(Math.max(0, i - 2), i + 3).map(m => msgBubble(m, m === R.msgs[i])).join("");
+}
+
+function copySummary() {
+  const r = R, T = r.totals;
+  const lines = [
+    `💬 Nossa conversa no WhatsApp`,
+    `${fmt(T.msgs)} mensagens em ${fmt(r.spanDays)} dias (${fmtDate(r.first)} a ${fmtDate(r.last)})`,
+    ...r.people.slice(0, 8).map(p => `• ${p.name}: ${fmt(p.msgs)} mensagens (${pct(p.msgs, T.msgs)}) · ${fmt(p.fun.teamo)} te amo`),
+    `❤️ ${fmt(T.teamo)} “te amo” no total`,
+    `🔤 Palavras favoritas: ${topN(r.words, 5).map(x => x[0]).join(", ")}`,
+    r.emojis.size ? `😍 Emojis favoritos: ${topN(r.emojis, 5).map(x => r.emojiShow.get(x[0])).join(" ")}` : "",
+    `🔥 Recorde: ${fmt(r.streak.len)} dias seguidos conversando`,
+  ].filter(Boolean);
+  navigator.clipboard.writeText(lines.join("\n")).then(
+    () => { $("#copy").textContent = "✅ Copiado!"; setTimeout(() => $("#copy").textContent = "📋 Copiar resumo", 2000); },
+    () => alert(lines.join("\n")));
+}
+
+/* ============================ conversa de exemplo ============================ */
+function demoChat() {
+  let seed = 42;
+  const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const pick = a => a[Math.floor(rnd() * a.length)];
+  const A = "Ana", B = "Pedro";
+  const common = ["kkkkkk", "sim", "nossa", "verdade", "e vc?", "tô indo", "chegou?", "que fome", "bora pedir pizza?",
+    "to com sono", "hahaha", "me liga", "saindo do trabalho agora", "vamos ver um filme hoje?", "pode ser",
+    "qual série a gente vai ver?", "acabei de chegar em casa", "que dia cansativo", "😂😂😂", "kkkk mds", "ok",
+    "olha isso https://exemplo.com/video", "tô morrendo de saudade", "foi mal, tava no banho", "obrigada ❤️", "valeu!"];
+  const ana = ["te amo ❤️", "te amo muito amor", "bom dia amor ☀️", "boa noite, sonha comigo 🌙", "saudade de vc 🥺",
+    "amor, vc viu minha mensagem?", "😍😍", "lindo demais", "beijos 😘", "eu te amo", "aaa que fofo 🥰",
+    "porra, esqueci a chave", "desculpa amor"];
+  const pedro = ["te amo também ❤️", "bom dia linda", "boa noite amor", "tbm te amo", "saudades", "partiu academia 💪",
+    "o jogo foi muito bom", "já tô chegando", "bjs", "que isso kkkkk", "almoço hoje?", "vou dormir, to mortinho 😴", "👍"];
+  const out = [];
+  const start = new Date(2025, 9, 12);
+  out.push(`12/10/2025 20:15 - As mensagens e as chamadas são protegidas com a criptografia de ponta a ponta.`);
+  out.push(`12/10/2025 20:15 - ${B}: oi! aqui é o Pedro, da festa de ontem 😅`);
+  out.push(`12/10/2025 20:19 - ${A}: oiii! achei que vc não ia mandar mensagem kkkkk`);
+  for (let day = 1; day < 370; day++) {
+    if (rnd() < 0.06) continue;
+    const date = new Date(start); date.setDate(date.getDate() + day);
+    const romance = Math.min(1, day / 60);
+    const n = 8 + Math.floor(rnd() * 60);
+    const times = Array.from({ length: n }, () => {
+      const r = rnd();
+      return r < 0.12 ? Math.floor(rnd() * 120) : r < 0.25 ? 420 + Math.floor(rnd() * 120) : 720 + Math.floor(rnd() * 700);
+    }).sort((x, y) => x - y);
+    let who = rnd() < 0.55 ? A : B;
+    const ds = `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+    for (const t of times) {
+      if (rnd() < 0.6) who = who === A ? B : A;
+      const own = who === A ? ana : pedro;
+      let text = rnd() < 0.35 * romance ? pick(own) : pick(common);
+      const r = rnd();
+      if (r < 0.06) text = "<Mídia oculta>";
+      else if (r < 0.07) text = who === A ? "Esta mensagem foi apagada" : "Você apagou esta mensagem";
+      else if (r < 0.08) text += " <Mensagem editada>";
+      else if (r < 0.085) text += "\ne mais uma coisa: não esquece de comprar pão";
+      out.push(`${ds} ${pad(Math.floor(t / 60))}:${pad(t % 60)} - ${who}: ${text}`);
+    }
+  }
+  return out.join("\n");
+}
+
+/* ============================ eventos ============================ */
+function showError(title, detail = "", sample = "") {
+  const box = $("#error");
+  box.innerHTML = `<b>⚠️ ${esc(title)}</b>${detail ? `<p>${esc(detail)}</p>` : ""}${sample
+    ? `<p class="small">Começo do arquivo (só você está vendo isto):</p><pre>${esc(sample)}</pre>` : ""}`;
+  box.hidden = false;
+  box.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function run(text, demo = false, source = "") {
+  $("#error").hidden = true;
+  const msgs = parseChat(text);
+  if (msgs.length < 2) {
+    const sample = text.replace(/\r/g, "").split("\n").filter(l => l.trim()).slice(0, 5).join("\n").slice(0, 600);
+    showError(`Não consegui encontrar mensagens em “${source}”.`,
+      "Confira se é uma conversa exportada pelo WhatsApp. Se for, o formato pode ser diferente do esperado: " +
+      "copie as linhas abaixo (pode trocar os nomes) e mande para eu ajustar o programa.", sample);
+    return;
+  }
+  render(analyze(msgs), demo, source);
+}
+async function handleFile(file) {
+  if (!file) return;
+  try { run(await readFile(file), false, file.name); }
+  catch (e) { showError(`Erro ao ler “${file.name}”.`, e.message); }
+}
+$("#file").addEventListener("change", e => handleFile(e.target.files[0]));
+$("#demo").addEventListener("click", () => run(demoChat(), true));
+// Aceita o arquivo solto em qualquer lugar da página (sem isso o navegador abriria/baixaria o arquivo).
+const drop = $("#drop");
+["dragenter", "dragover"].forEach(ev => window.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => window.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+window.addEventListener("drop", e => {
+  if (!e.dataTransfer.files.length) return;
+  if ($("#start").hidden) { $("#results").hidden = true; $("#start").hidden = false; }
+  handleFile(e.dataTransfer.files[0]);
+});
+</script>
+</body>
+</html>

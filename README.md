@@ -22,6 +22,11 @@ estruturas de dados e fundamentos de programação.
 
 > 🚧 **Em construção:** as atividades estão sendo organizadas e adicionadas aos poucos.
 
+### Projetos
+
+- [💬 Analisador de Conversas do WhatsApp](analisador-whatsapp/) — estatísticas de uma conversa exportada
+  (quem fala mais, palavras e emojis favoritos, contador de “te amo”, prêmios e gráficos)
+
 ### Organização (sugerida)
 
 ```
