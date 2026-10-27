@@ -38,7 +38,11 @@
   .how { max-width: 640px; margin: 0 auto; }
   .how details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin: 8px 0; }
   .how summary { cursor: pointer; font-weight: 600; }
-  .error { color: #d33; text-align: center; font-weight: 600; }
+  .error { max-width: 640px; margin: 0 auto 16px; background: #fde8e8; color: #9b1c1c; border: 2px solid #e02424;
+           border-radius: 14px; padding: 14px 16px; }
+  .error pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #fff; color: #333; border-radius: 8px;
+               padding: 8px; font-size: .8rem; max-height: 160px; overflow: auto; }
+  .source { text-align: center; margin: -4px 0 14px; }
 
   section { margin-top: 32px; }
   .section-title { font-size: 1.45rem; margin: 0 0 14px; }
@@ -122,7 +126,7 @@
         <span class="muted small">.txt (Android) ou .zip (iPhone)</span></p>
       <input type="file" id="file" accept=".txt,.zip,text/plain,application/zip" hidden>
     </label>
-    <p class="error" id="error" hidden></p>
+    <div class="error" id="error" role="alert" hidden></div>
     <p style="text-align:center"><button class="btn ghost" id="demo">✨ Ver com uma conversa de exemplo</button></p>
 
     <div class="how">
@@ -213,7 +217,7 @@ async function unzipChat(buf) {
   }
   const isChat = f => /_chat|conversa|whatsapp/i.test(f.name);
   const txt = files.filter(f => /\.txt$/i.test(f.name)).sort((a, b) => isChat(b) - isChat(a) || b.size - a.size)[0];
-  if (!txt) throw new Error("Não encontrei nenhum .txt dentro do ZIP.");
+  if (!txt) throw new Error("Não encontrei nenhum .txt dentro do ZIP. Arquivos encontrados: " + (files.map(f => f.name).join(", ") || "nenhum"));
   const lnl = dv.getUint16(txt.local + 26, true), lel = dv.getUint16(txt.local + 28, true);
   const data = new Uint8Array(buf, txt.local + 30 + lnl + lel, txt.size);
   if (txt.method === 0) return dec.decode(data);
@@ -303,7 +307,7 @@ function parseChat(raw) {
     }
     const t = new Date(y, mo - 1, d, h, e.mi, e.s);
     if (isNaN(t)) continue;
-    let body = e.body;
+    let body = e.body.replace(/\s+$/, "");
     if (SYSTEM.test(body)) continue;
     const edited = EDITED.test(body);
     if (edited) body = body.replace(EDITED, "");
@@ -321,7 +325,7 @@ const rx = s => new RegExp("(?<![\\p{L}\\p{N}])(?:" + s + ")(?![\\p{L}\\p{N}])",
 // Contadores divertidos. Cada um vira um card com o ranking por pessoa.
 const FUN = [
   { k: "teamo", label: "“Te amo”", emoji: "❤️",
-    re: rx("(?:eu\\s*)?t[ei]\\s*am[ou]+|amo\\s+(?:vc|voc[eê]|tu|demais)|i\\s+love\\s+(?:you|u|ya)|love\\s+(?:you|u)|ily|te\\s+adoro") },
+    re: rx("(?:eu\\s*)?t+[ei]+\\s*a+m+[ou]+h*|amo[\\s-]+te|amo\\s+(?:muito\\s+|tanto\\s+|demais\\s+)?(?:vcs?|voc[eê]s?|tu)|amo\\s+demais|i\\s+love\\s+(?:you|u|ya)|love\\s+(?:you|u|ya)|ily|te\\s+adoro") },
   { k: "saudade", label: "Saudades", emoji: "🥺", re: rx("saudades?|sdds?|miss\\s+(?:you|u)") },
   { k: "carinho", label: "Apelidos carinhosos", emoji: "🥰",
     re: rx("amor(?:zinho|zinha|z[aã]o)?|mor(?:zinho|zinha)?|minha\\s+vida|bb|beb[eê]|baby|bae|gatinh[oa]|princes[ao]|lind[oa]|xuxu|chuchu|nen[eé]m|benzinho|fofinh[oa]|meu\\s+bem") },
@@ -365,6 +369,7 @@ function analyze(msgs) {
   const heat = Array.from({ length: 7 }, () => Array(24).fill(0));
   const words = new Map(), emojis = new Map(), emojiShow = new Map();
   let prev = null, run = 0, longestGap = null, longest = null, firstLove = null;
+  const loveMsgs = [];
   let lastDay = null;
 
   msgs.forEach((m, idx) => {
@@ -414,6 +419,7 @@ function analyze(msgs) {
       s.fun[f.k] += c;
       if (f.k === "teamo") {
         inc(loveByMonth, mk, c);
+        loveMsgs.push(m);
         if (!firstLove) firstLove = { m, idx };
       }
     }
@@ -459,7 +465,7 @@ function analyze(msgs) {
 
   return {
     msgs, people: list, words, emojis, emojiShow, dayCount, monthByPerson, loveByMonth, months, heat,
-    first, last, spanDays, activeDays: dayCount.size, streak, busiest, longestGap, longest, firstLove,
+    first, last, spanDays, activeDays: dayCount.size, streak, busiest, longestGap, longest, firstLove, loveMsgs,
     totals: {
       msgs: msgs.length, words: sum("words"), media: sum("mediaTotal"), emojis: sum("emojiCount"),
       audio: sum(s => s.media.audio), stickers: sum(s => s.media.sticker), teamo: sum(s => s.fun.teamo), deleted: sum("deleted"),
@@ -524,7 +530,7 @@ function msgBubble(m, focus = false) {
 /* ============================ renderização ============================ */
 let R = null;
 
-function render(r) {
+function render(r, demo = false, source = "") {
   R = r;
   const T = r.totals, people = r.people, top = people[0];
   const series = seriesPeople(r);
@@ -538,6 +544,9 @@ function render(r) {
 
   let html = `
   <header class="hero"><h1>💬 ${multi && people.length === 2 ? esc(people[0].name) + " & " + esc(people[1].name) : "Resultado da análise"}</h1></header>
+  ${source ? `<p class="source muted small">📄 Arquivo analisado: <b>${esc(source)}</b></p>` : ""}
+  ${demo ? `<p class="card" style="text-align:center;border-color:var(--accent)">⚠️ <b>Esta é uma conversa de EXEMPLO, inventada</b>
+    (Ana e Pedro). Para ver a sua, clique em “Analisar outra conversa” lá embaixo e escolha o arquivo exportado.</p>` : ""}
   <div class="headline">
     ${multi ? "Vocês trocaram" : "Foram"} <b>${fmt(T.msgs)}</b> mensagens em <b>${fmt(r.spanDays)}</b> dias
     (de ${fmtDate(r.first)} a ${fmtDate(r.last)}) — uma média de <b>${perDay.toFixed(1).replace(".", ",")}</b> por dia.
@@ -609,6 +618,10 @@ function render(r) {
     ${loveMonths.length ? `<div class="card" style="margin-top:16px"><h2>“Te amo” ao longo do tempo</h2>
       ${colChart(r.months.map(k => MESES[+k.slice(5) - 1]), [{ label: "te amo", color: "var(--accent)", values: r.months.map(k => r.loveByMonth.get(k) || 0) }],
         { height: 120, every: Math.ceil(r.months.length / 14), titles: r.months.map(k => MESES[+k.slice(5) - 1] + "/" + k.slice(0, 4)) })}</div>` : ""}
+    ${r.loveMsgs.length ? `<details class="card" style="margin-top:16px"><summary><b>📝 Conferir as ${fmt(r.loveMsgs.length)} mensagens contadas</b></summary>
+      <p class="muted small">Conta “te amo”, “eu te amo”, “te amoooo”, “teamo”, “amo você/vc”, “amo muito vc”, “amo-te”, “te adoro” e “I love you”.
+        Achou algum que ficou de fora? Use a busca mais abaixo para procurar.</p>
+      ${r.loveMsgs.slice(0, 2000).map(m => msgBubble(m)).join("")}</details>` : ""}
   </section>`;
 
   /* ---- prêmios ---- */
@@ -884,27 +897,42 @@ function demoChat() {
 }
 
 /* ============================ eventos ============================ */
-function run(text) {
+function showError(title, detail = "", sample = "") {
+  const box = $("#error");
+  box.innerHTML = `<b>⚠️ ${esc(title)}</b>${detail ? `<p>${esc(detail)}</p>` : ""}${sample
+    ? `<p class="small">Começo do arquivo (só você está vendo isto):</p><pre>${esc(sample)}</pre>` : ""}`;
+  box.hidden = false;
+  box.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function run(text, demo = false, source = "") {
   $("#error").hidden = true;
   const msgs = parseChat(text);
   if (msgs.length < 2) {
-    $("#error").textContent = "Não consegui encontrar mensagens nesse arquivo. Confira se é uma conversa exportada pelo WhatsApp (.txt ou .zip).";
-    $("#error").hidden = false;
+    const sample = text.replace(/\r/g, "").split("\n").filter(l => l.trim()).slice(0, 5).join("\n").slice(0, 600);
+    showError(`Não consegui encontrar mensagens em “${source}”.`,
+      "Confira se é uma conversa exportada pelo WhatsApp. Se for, o formato pode ser diferente do esperado: " +
+      "copie as linhas abaixo (pode trocar os nomes) e mande para eu ajustar o programa.", sample);
     return;
   }
-  render(analyze(msgs));
+  render(analyze(msgs), demo, source);
 }
 async function handleFile(file) {
   if (!file) return;
-  try { run(await readFile(file)); }
-  catch (e) { $("#error").textContent = "Erro ao ler o arquivo: " + e.message; $("#error").hidden = false; }
+  try { run(await readFile(file), false, file.name); }
+  catch (e) { showError(`Erro ao ler “${file.name}”.`, e.message); }
 }
 $("#file").addEventListener("change", e => handleFile(e.target.files[0]));
-$("#demo").addEventListener("click", () => run(demoChat()));
+$("#demo").addEventListener("click", () => run(demoChat(), true));
+// Aceita o arquivo solto em qualquer lugar da página (sem isso o navegador abriria/baixaria o arquivo).
 const drop = $("#drop");
-["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
-["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
-drop.addEventListener("drop", e => handleFile(e.dataTransfer.files[0]));
+["dragenter", "dragover"].forEach(ev => window.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => window.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+window.addEventListener("drop", e => {
+  if (!e.dataTransfer.files.length) return;
+  if ($("#start").hidden) { $("#results").hidden = true; $("#start").hidden = false; }
+  handleFile(e.dataTransfer.files[0]);
+});
 </script>
 </body>
 </html>
